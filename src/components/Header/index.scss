@@ -1,5 +1,5 @@
-@import '../../styles/base.scss';
-@import '../../styles/style.scss';
+@use '../../styles/base.scss' as *;
+@use '../../styles/style.scss' as *;
 
 .headerBtnBase {
   position: absolute;
@@ -49,11 +49,17 @@
   }
 
   .blogBtn {
+    right: calc(10px * 3 + 32px * 2);
+    @extend .headerBtnBase;
+  }
+
+  .settingBtn {
     right: calc(10px * 2 + 32px);
     @extend .headerBtnBase;
   }
 
-  .blogBtn:hover {
+  .blogBtn:hover,
+  .settingBtn:hover {
     background-color: #e5e6eb;
     cursor: pointer;
   }

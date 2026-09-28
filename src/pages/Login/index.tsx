@@ -2,11 +2,11 @@ import { Button, Input, Message } from '@arco-design/web-react';
 import { useTitle } from 'ahooks';
 import React, { useState } from 'react';
 import { BiLockAlt, BiUser } from 'react-icons/bi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
-import { authLoginAPI } from '@/utils/apis/authLogin';
-import { auth } from '@/utils/cloudBase';
-import { avatarUrl, nowEnv, siteTitle, visitorEmail, visitorPwd } from '@/utils/constant';
+import { login } from '@/utils/api';
+import { avatarUrl, siteTitle } from '@/utils/constant';
+import { showError } from '@/utils/feedback';
 
 import s from './index.scss';
 
@@ -15,27 +15,25 @@ const Login: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleLogin = async (Email: string, pwd: string) => {
-    if (nowEnv === 'test') {
-      const res = await auth.anonymousAuthProvider().signIn();
-      if (res.isAnonymousAuth) {
-        navigate('admin');
-        Message.success('登录成功！欢迎进入个人博客后台管理系统！');
-      }
-      return;
-    }
-    if (!Email || !pwd) {
+  const handleLogin = async () => {
+    if (!email || !password) {
       Message.warning('登录失败！请输入账号、密码！');
       return;
     }
-    const res = await authLoginAPI(Email, pwd);
-    res && navigate('admin');
-    res
-      ? Message.success('登录成功！欢迎进入个人博客后台管理系统！')
-      : Message.warning('登录失败！用户名或密码不正确，请重新登录！');
+    setLoading(true);
+    try {
+      await login(email.trim(), password);
+      Message.success('登录成功！欢迎进入个人博客后台管理系统！');
+      navigate('/home', { replace: true });
+    } catch (err) {
+      showError(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,6 +48,8 @@ const Login: React.FC = () => {
             style={{ marginBottom: 20 }}
             size='large'
             prefix={<BiUser />}
+            placeholder='邮箱'
+            autoComplete='username'
             value={email}
             onChange={value => setEmail(value)}
           />
@@ -57,20 +57,14 @@ const Login: React.FC = () => {
             style={{ marginBottom: 20 }}
             size='large'
             prefix={<BiLockAlt />}
-            defaultValue='password'
+            placeholder='密码'
+            autoComplete='current-password'
             value={password}
             onChange={value => setPassword(value)}
+            onPressEnter={handleLogin}
           />
           <div className={s.btnBox}>
-            <Button
-              type='primary'
-              status='success'
-              size='large'
-              onClick={() => handleLogin(visitorEmail, visitorPwd)}
-            >
-              {nowEnv === 'prod' ? '游客' : '测试'}
-            </Button>
-            <Button type='primary' size='large' onClick={() => handleLogin(email, password)}>
+            <Button type='primary' size='large' long loading={loading} onClick={handleLogin}>
               登录
             </Button>
           </div>

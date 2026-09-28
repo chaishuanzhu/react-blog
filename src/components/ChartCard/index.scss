@@ -1,4 +1,5 @@
-@import '../CountCard/index.scss';
+@use '../../styles/base.scss' as *;
+@use '../CountCard/index.scss' as *;
 
 .cardBase {
   position: relative;

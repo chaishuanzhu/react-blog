@@ -1,142 +1,102 @@
-import { useResetState, useTitle } from 'ahooks';
+import { Input, Message } from '@arco-design/web-react';
+import { useTitle } from 'ahooks';
 import React, { useState } from 'react';
 
 import CustomModal from '@/components/CustomModal';
 import ImgView from '@/components/ImgView';
 import MyTable from '@/components/MyTable';
 import PageHeader from '@/components/PageHeader';
+import UploadButton from '@/components/UploadButton';
+import type { Project } from '@/utils/api';
+import { projectApi } from '@/utils/api';
 import { showPageSize, siteTitle } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
-import { usePage } from '@/utils/hooks/usePage';
-import { useTableData } from '@/utils/hooks/useTableData';
+import { mutate } from '@/utils/feedback';
+import { useClientTable } from '@/utils/hooks/useClientTable';
 
 import { Title } from '../titleConfig';
 import { useColumns } from './config';
 
+interface Form {
+  sortOrder: string;
+  name: string;
+  description: string;
+  cover: string;
+  url: string;
+}
+
+const emptyForm: Form = { sortOrder: '0', name: '', description: '', cover: '', url: '' };
+
 const Show: React.FC = () => {
   useTitle(`${siteTitle} | ${Title.Show}`);
 
-  const { page, setPage } = usePage();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEdit, setIsEdit] = useState(false);
-
-  const [id, setId, resetId] = useResetState('');
-  const [order, setOrder, resetOrder] = useResetState('');
-  const [name, setName, resetName] = useResetState('');
-  const [descr, setDescr, resetDescr] = useResetState('');
-  const [cover, setCover, resetCover] = useResetState('');
-  const [link, setLink, resetLink] = useResetState('');
+  const [id, setId] = useState(0);
+  const [form, setForm] = useState(emptyForm);
 
   const [imgUrl, setImgUrl] = useState('');
   const [isViewShow, setIsViewShow] = useState(false);
 
-  const dataFilter = [
-    {
-      text: '序号',
-      data: order,
-      setData: setOrder,
-      reSet: resetOrder,
-      require: true
-    },
-    {
-      text: '名称',
-      data: name,
-      setData: setName,
-      reSet: resetName,
-      require: true
-    },
-    {
-      text: '描述',
-      data: descr,
-      setData: setDescr,
-      reSet: resetDescr,
-      require: true
-    },
-    {
-      text: '封面',
-      data: cover,
-      setData: setCover,
-      reSet: resetCover,
-      require: true
-    },
-    {
-      text: '链接',
-      data: link,
-      setData: setLink,
-      reSet: resetLink,
-      require: true
-    }
-  ];
+  const { data, total, loading, refresh, page, setPage, handleDelete } = useClientTable(
+    projectApi.list,
+    projectApi.remove,
+    showPageSize
+  );
 
-  const clearData = () => {
-    for (const { reSet } of dataFilter) {
-      reSet();
-    }
-    resetId();
-  };
-
-  const modalCancel = () => {
-    setIsModalOpen(false);
-    setIsEdit(false);
-    clearData();
-  };
-
-  const { data, total, loading, handleDelete, modalOk } = useTableData({
-    type: DB.Show,
-    DBName: DB.Show,
-    dataFilter,
-    page,
-    setPage,
-    modalCancel,
-    sortKey: 'order',
-    isAsc: true,
-    pageSize: showPageSize
-  });
-
-  const handleEdit = (id: string) => {
+  const openModal = (item?: Project) => {
+    setId(item?.id ?? 0);
+    setForm(
+      item
+        ? {
+            sortOrder: String(item.sortOrder),
+            name: item.name,
+            description: item.description,
+            cover: item.cover,
+            url: item.url
+          }
+        : emptyForm
+    );
     setIsModalOpen(true);
-    setIsEdit(true);
-    setId(id);
-    for (const item of data) {
-      const { _id, cover, descr, link, name, order } = item;
-      if (id === _id) {
-        setCover(cover);
-        setDescr(descr);
-        setLink(link);
-        setName(name);
-        setOrder(order);
-        break;
-      }
+  };
+
+  const input = (text: string, key: keyof Form, placeholder?: string) => (
+    <Input
+      size='large'
+      addBefore={text}
+      placeholder={placeholder}
+      value={form[key]}
+      onChange={value => setForm(prev => ({ ...prev, [key]: value }))}
+      style={{ marginBottom: 10 }}
+    />
+  );
+
+  const modalOk = async () => {
+    const sortOrder = Number(form.sortOrder);
+    if (!form.name.trim() || !Number.isInteger(sortOrder)) {
+      Message.info('请输入作品名称和整数序号！');
+      return;
     }
+    const body = { ...form, sortOrder };
+    const ok = await mutate(
+      () => (id ? projectApi.update(id, body) : projectApi.create(body)),
+      id ? '修改成功！' : '添加成功！'
+    );
+    if (!ok) return;
+    setIsModalOpen(false);
+    refresh();
   };
 
   const columns = useColumns({
-    handleEdit,
+    handleEdit: openModal,
     handleDelete,
-    deleteProps: {
-      page,
-      setPage
-    },
     onClickImg: (url: string) => {
       setIsViewShow(true);
       setImgUrl(url);
     }
   });
 
-  const handleModalOk = () => {
-    const data = { order: Number(order), name, descr, cover, link };
-    modalOk({
-      isEdit,
-      id,
-      data,
-      page,
-      isClearAll: true
-    });
-  };
-
   return (
     <>
-      <PageHeader text='添加作品' onClick={() => setIsModalOpen(true)} />
+      <PageHeader text='添加作品' onClick={() => openModal()} />
       <MyTable
         loading={loading}
         columns={columns}
@@ -147,13 +107,32 @@ const Show: React.FC = () => {
         setPage={setPage}
       />
       <CustomModal
-        isEdit={isEdit}
+        isEdit={!!id}
         isModalOpen={isModalOpen}
-        DBType={DB.Show}
-        modalOk={handleModalOk}
-        modalCancel={modalCancel}
-        dataFilter={dataFilter}
-      />
+        name='作品'
+        modalOk={modalOk}
+        modalCancel={() => setIsModalOpen(false)}
+      >
+        {input('序号', 'sortOrder', '越小越靠前')}
+        {input('名称', 'name')}
+        {input('描述', 'description', '（可选）')}
+        <div style={{ display: 'flex', marginBottom: 10 }}>
+          <Input
+            size='large'
+            addBefore='封面'
+            placeholder='（可选）https://'
+            value={form.cover}
+            onChange={cover => setForm(prev => ({ ...prev, cover }))}
+            style={{ marginRight: 10 }}
+          />
+          <UploadButton
+            size='large'
+            text='上传'
+            onUploaded={cover => setForm(prev => ({ ...prev, cover }))}
+          />
+        </div>
+        {input('链接', 'url', '（可选）https://')}
+      </CustomModal>
       <ImgView
         isViewShow={isViewShow}
         viewUrl={imgUrl}

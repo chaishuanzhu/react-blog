@@ -1,42 +1,13 @@
-// 当前环境
-// export const nowEnv: 'test' | 'prod' = 'test';
-export const nowEnv: "test" | "prod" = "prod";
+import { siteConfig } from '@/site.config';
 
-// 旧版链接
-export const oldVersionUrl = "http://124.222.94.201:84";
+// 路由前缀，如 '/admin'（来自 scripts/constant.js 的 PUBLIC_PATH）
+export const basePath = (process.env.PUBLIC_PATH as string).replace(/\/$/, '');
 
-// 个人基本信息
-export const userAvatar = "https://img.lzxjack.top/202304061855646.webp";
-export const avatarUrl = "https://img.lzxjack.top/202203302348298.webp";
-
-// 游客帐号信息
-export const visitorEmail = "490878306@qq.com";
-export const visitorPwd = "test123123";
-export const visitorAvatar = "https://img.lzxjack.top/202304061850910.webp";
-
-// 站点名称
-export const AppName = "飞鸟小站";
-
-// 博客主页url
-export const blogUrl = "https://lzxjack.top";
-
-// 博客后台github
-export const githubUrl = "https://github.com/lzxjack/blog-admin";
-
-// 页面title
-export const siteTitle = "飞鸟小站后台管理";
-
-// 数据缓存时间
-export const staleTime = 180000;
-
-// 游客修改失败后的提示语句
-export const visitorText = "游客不可以修改哦~😆";
-
-// 操作失败后的提示语句
-export const failText = "操作失败，请重试！";
-
-// notice数据id
-export const noticeId = "2d44d6c2612a2178078ff9f553561764";
+// 标题、头像、博客地址在 src/site.config.ts 中修改
+export const avatarUrl = siteConfig.defaultAvatar;
+export const blogUrl = siteConfig.blogUrl;
+export const blogLink = (path: string) => blogUrl.replace(/\/$/, '') + path;
+export const siteTitle = siteConfig.title;
 
 // 分页：默认每页数量
 export const defaultPageSize = 12;
@@ -44,3 +15,10 @@ export const defaultPageSize = 12;
 export const showPageSize = 6;
 // 建站日志 分页
 export const logPageSize = 10;
+
+// 说说最多图片数（与服务端一致）
+export const maxMomentImages = 9;
+
+// 时间输入格式
+export const dateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
+export const dateFormat = 'YYYY-MM-DD';

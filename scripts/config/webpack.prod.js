@@ -3,10 +3,10 @@ const { merge } = require('webpack-merge');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const common = require('./webpack.common');
-const { ROOT_PATH } = require('../constant');
+const { ROOT_PATH, PUBLIC_PATH } = require('../constant');
 
 module.exports = merge(common, {
   target: 'browserslist',
@@ -14,20 +14,22 @@ module.exports = merge(common, {
   devtool: false,
   output: {
     path: path.resolve(ROOT_PATH, './build'),
-    publicPath: './',
+    publicPath: PUBLIC_PATH,
     filename: 'js/[name].[contenthash:8].js',
     chunkFilename: 'js/[name].[contenthash:8].js',
     // 资源
-    assetModuleFilename: 'assets/[name].[contenthash:8].[ext]'
+    assetModuleFilename: 'assets/[name].[contenthash:8][ext]'
   },
   plugins: [
     // 生产模式使用了MiniCssExtractPlugin.loader，则需要使用MiniCssExtractPlugin
     new MiniCssExtractPlugin({
       filename: 'css/[name].[contenthash:8].css',
-      chunkFilename: 'css/[name].[contenthash:8].chunk.css'
+      chunkFilename: 'css/[name].[contenthash:8].chunk.css',
+      // CSS Modules 类名互不影响，引入顺序无关
+      ignoreOrder: true
     })
     // 查看打包体积大小，启用一个本地服务器
-    // new BundleAnalyzerPlugin(),
+    // new BundleAnalyzerPlugin()
   ],
 
   // 专门存放优化打包的配置

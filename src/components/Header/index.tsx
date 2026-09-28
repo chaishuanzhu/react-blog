@@ -1,37 +1,52 @@
-import { Message, Popconfirm } from '@arco-design/web-react';
-import React from 'react';
-import { IoHome, IoLogOut } from 'react-icons/io5';
-import { useNavigate } from 'react-router-dom';
+import { Dropdown, Menu, Message, Popconfirm } from '@arco-design/web-react';
+import { useRequest } from 'ahooks';
+import React, { useState } from 'react';
+import { IoHome, IoLogOut, IoSettingsSharp } from 'react-icons/io5';
+import { useNavigate } from 'react-router';
 
-import { isAdmin } from '@/utils/cloudBase';
-import { blogUrl, nowEnv, userAvatar, visitorAvatar } from '@/utils/constant';
+import { clearToken, getMe } from '@/utils/api';
+import { avatarUrl, blogUrl } from '@/utils/constant';
 import { useTime } from '@/utils/hooks/useTime';
 
 import s from './index.scss';
+import PasswordModal from './PasswordModal';
+import ProfileModal from './ProfileModal';
+
+type Dialog = 'profile' | 'password' | null;
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { timeText } = useTime();
+  const { data: me, mutate } = useRequest(getMe);
+  const [dialog, setDialog] = useState<Dialog>(null);
 
   const logout = () => {
-    localStorage.clear();
+    clearToken();
     Message.success('已退出个人博客后台管理系统！');
-    navigate('/');
+    navigate('/login');
   };
 
-  const getAvatar = () => (isAdmin() ? userAvatar : visitorAvatar);
-  const getName = () => (isAdmin() ? '飞鸟' : '游客');
+  const menu = (
+    <Menu onClickMenuItem={key => setDialog(key as Dialog)}>
+      <Menu.Item key='profile'>个人资料</Menu.Item>
+      <Menu.Item key='password'>修改密码</Menu.Item>
+    </Menu>
+  );
 
   return (
     <div className={s.headerBox}>
-      <img src={getAvatar()} alt='' className={s.avatar} />
+      <img src={me?.avatar || avatarUrl} alt='' className={s.avatar} />
       <div className={s.avatarText}>
-        {timeText}，
-        <span className={s.userName}>{nowEnv === 'test' ? '测试用户' : getName()}</span>！
+        {timeText}，<span className={s.userName}>{me?.nickname ?? ''}</span>！
       </div>
-      <a className={s.blogBtn} href={blogUrl} target='_blank'>
+      <a className={s.blogBtn} href={blogUrl} target='_blank' rel='noreferrer'>
         <IoHome />
       </a>
+      <Dropdown droplist={menu} position='br' trigger='click'>
+        <div className={s.settingBtn}>
+          <IoSettingsSharp />
+        </div>
+      </Dropdown>
       <Popconfirm
         title='确定退出吗？'
         position='br'
@@ -43,6 +58,13 @@ const Header: React.FC = () => {
           <IoLogOut />
         </div>
       </Popconfirm>
+      <ProfileModal
+        visible={dialog === 'profile'}
+        user={me}
+        onClose={() => setDialog(null)}
+        onSaved={mutate}
+      />
+      <PasswordModal visible={dialog === 'password'} onClose={() => setDialog(null)} />
     </div>
   );
 };

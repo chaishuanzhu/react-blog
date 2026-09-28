@@ -1,28 +1,21 @@
 import { useThrottleFn } from 'ahooks';
+import type { UIEvent } from 'react';
 import { useRef } from 'react';
 
+// 编辑区与预览区按滚动比例同步
 export const useScrollSync = () => {
-  const leftRef = useRef(null);
-  const rightRef = useRef(null);
+  const leftRef = useRef<HTMLTextAreaElement>(null);
+  const rightRef = useRef<HTMLDivElement>(null);
 
-  const left = leftRef.current! as any;
-  const right = rightRef.current! as any;
-
-  const handleScroll = (event: any) => {
-    const scrollTopRatio =
-      event.target.scrollTop / (event.target.scrollHeight - event.target.clientHeight);
-    if (event.target === left) {
-      right.scrollTop = scrollTopRatio * (right.scrollHeight - right.clientHeight);
-    } else if (event.target === right) {
-      left.scrollTop = scrollTopRatio * (left.scrollHeight - left.clientHeight);
-    }
+  const handleScroll = (event: UIEvent<HTMLElement>) => {
+    const source = event.target as HTMLElement;
+    const target = source === leftRef.current ? rightRef.current : leftRef.current;
+    if (!target) return;
+    const ratio = source.scrollTop / (source.scrollHeight - source.clientHeight || 1);
+    target.scrollTop = ratio * (target.scrollHeight - target.clientHeight);
   };
 
   const { run: handleScrollRun } = useThrottleFn(handleScroll, { wait: 60 });
 
-  return {
-    leftRef,
-    rightRef,
-    handleScrollRun
-  };
+  return { leftRef, rightRef, handleScrollRun };
 };

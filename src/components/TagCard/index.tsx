@@ -1,24 +1,12 @@
 import { Input, Message, Popconfirm } from '@arco-design/web-react';
 import { IconDelete, IconEdit, IconLoading } from '@arco-design/web-react/icon';
-import { useMount, useRequest, useResetState } from 'ahooks';
+import { useRequest } from 'ahooks';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
-import { selectTag } from '@/redux/selectors';
-import { resetArticleData } from '@/redux/slices/articles';
-import { resetDraftData } from '@/redux/slices/drafts';
-import { setTags } from '@/redux/slices/tags';
-import { addDataAPI } from '@/utils/apis/addData';
-import { deleteDataAPI } from '@/utils/apis/deleteData';
-import { getDataAPI } from '@/utils/apis/getData';
-import { updateDataAPI } from '@/utils/apis/updateData';
-import { updateWhereDataAPI } from '@/utils/apis/updateWhereData';
-import { _, isAdmin } from '@/utils/cloudBase';
-import { failText, visitorText } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
+import { tagApi } from '@/utils/api';
+import { mutate } from '@/utils/feedback';
 
 import CustomModal from '../CustomModal';
 import { useColor } from './config';
@@ -28,184 +16,52 @@ const { Search } = Input;
 
 const TagCard: React.FC = () => {
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [id, setId] = useState('');
-  const [oldTag, setOldTag] = useState('');
-  const [tag, setTag] = useState('');
-  const [newTag, setNewTag, resetNewTag] = useResetState('');
+  const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
+  const [newTag, setNewTag] = useState('');
 
-  const tags = useSelector(selectTag);
-  const dispatch = useDispatch();
-
-  const { loading, run } = useRequest(() => getDataAPI(DB.Tag), {
-    retryCount: 3,
-    manual: true,
-    onSuccess: res => {
-      dispatch(setTags(res.data));
-    }
-  });
-
-  useMount(() => {
-    if (!tags.isDone) {
-      run();
-    }
-  });
-
-  const updateTagFromDB = ({ oldTag, newTag }: { oldTag: string; newTag: string }) => {
-    // 1. 添加新标签
-    updateWhereDataAPI(
-      DB.Article,
-      { tags: _.all([oldTag]) },
-      { tags: _.addToSet(newTag) }
-    ).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        // 2. 删除旧标签
-        updateWhereDataAPI(
-          DB.Article,
-          { tags: _.all([oldTag]) },
-          { tags: _.pull(oldTag) }
-        ).then(res => {
-          if (!res.success && !res.permission) {
-            Message.warning(visitorText);
-          } else if (res.success && res.permission) {
-            Message.success(`更新数据库标签成功！`);
-            dispatch(resetArticleData());
-            dispatch(resetDraftData());
-          } else {
-            Message.warning(failText);
-          }
-        });
-      } else {
-        Message.warning(failText);
-      }
-    });
-  };
-
-  const deleteTagFromDB = (tagWillDeletd: string) => {
-    updateWhereDataAPI(
-      DB.Article,
-      { tags: _.all([tagWillDeletd]) },
-      { tags: _.pull(tagWillDeletd) }
-    ).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success(`更新数据库标签成功！`);
-        dispatch(resetArticleData());
-        dispatch(resetDraftData());
-      } else {
-        Message.warning(failText);
-      }
-    });
-  };
-
-  const isExist = (
-    content: string,
-    data: { class?: string; tag?: string }[],
-    type: 'class' | 'tag'
-  ) => {
-    return data.some(item => item[type as keyof typeof item] === content);
-  };
-
-  const openModal = (id: string) => {
-    setIsModalOpen(true);
-    setId(id);
-    for (const { _id, tag } of tags.value) {
-      if (id === _id) {
-        setTag(tag);
-        setOldTag(tag);
-        break;
-      }
-    }
-  };
-
-  const modalCancel = () => {
-    setIsModalOpen(false);
-  };
-
+  const { data: tags = [], loading, refresh } = useRequest(tagApi.list);
   const { tagColor, colorLen } = useColor();
 
-  const modalOk = () => {
-    if (!tag) {
+  const isExist = (name: string, exceptId = 0) =>
+    tags.some(t => t.name === name && t.id !== exceptId);
+
+  const modalOk = async () => {
+    if (!editing) return;
+    const name = editing.name.trim();
+    if (!name) {
       Message.warning('请输入标签名称~');
       return;
     }
-    if (isExist(tag, tags.value, 'tag')) {
+    if (isExist(name, editing.id)) {
       Message.warning('标签名称已存在~');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+    if (await mutate(() => tagApi.update(editing.id, { name }), '修改成功！')) {
+      setEditing(null);
+      refresh();
     }
-    updateDataAPI(DB.Tag, id, { tag }).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('修改成功！');
-        modalCancel();
-        // flushSync(() => clearCache(`${DB.Tag}-data`));
-        flushSync(() => run());
-        updateTagFromDB({
-          oldTag,
-          newTag: tag
-        });
-      } else {
-        Message.warning(failText);
-      }
-    });
   };
 
-  const addNewTag = () => {
-    if (!newTag) {
+  const addNewTag = async () => {
+    const name = newTag.trim();
+    if (!name) {
       Message.warning('请输入标签名称~');
       return;
     }
-    if (isExist(newTag, tags.value, 'tag')) {
+    if (isExist(name)) {
       Message.warning('标签名称已存在~');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+    if (await mutate(() => tagApi.create({ name }), '添加成功！')) {
+      setNewTag('');
+      refresh();
     }
-    addDataAPI(DB.Tag, { tag: newTag, date: Date.now() }).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('添加成功！');
-        resetNewTag();
-        // flushSync(() => clearCache(`${DB.Tag}-data`));
-        flushSync(() => run());
-      } else {
-        Message.warning(failText);
-      }
-    });
   };
 
-  const deleteTag = (id: string, tagWillDeletd: string) => {
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+  const deleteTag = async (id: number) => {
+    if (await mutate(() => tagApi.remove(id), '删除成功！')) {
+      refresh();
     }
-    deleteDataAPI(DB.Tag, id).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('删除成功！');
-        // flushSync(() => clearCache(`${DB.Tag}-data`));
-        flushSync(() => run());
-        deleteTagFromDB(tagWillDeletd);
-      } else {
-        Message.warning(failText);
-      }
-    });
-  };
-
-  const toArticle = (tag: string) => {
-    navigate(`/admin/article?searchTag=${encodeURIComponent(tag)}`);
   };
 
   return (
@@ -225,41 +81,44 @@ const TagCard: React.FC = () => {
           {loading ? (
             <IconLoading />
           ) : (
-            tags.value.map(
-              ({ _id, tag }: { _id: string; tag: string }, index: number) => (
-                <div
-                  key={_id}
-                  className={s.tagItem}
-                  style={{ backgroundColor: tagColor[index % colorLen] }}
-                  onDoubleClick={() => toArticle(tag)}
+            tags.map(({ id, name, articleCount }, index) => (
+              <div
+                key={id}
+                className={s.tagItem}
+                style={{ backgroundColor: tagColor[index % colorLen] }}
+                title={`${articleCount} 篇文章，双击查看`}
+                onDoubleClick={() => navigate(`/article?tagId=${id}`)}
+              >
+                {name}
+                <IconEdit className={s.iconBtn} onClick={() => setEditing({ id, name })} />
+                <Popconfirm
+                  position='br'
+                  title={`确定要删除「${name}」吗？`}
+                  onOk={() => deleteTag(id)}
+                  okText='Yes'
+                  cancelText='No'
                 >
-                  {tag}
-                  <IconEdit className={s.iconBtn} onClick={() => openModal(_id)} />
-                  <Popconfirm
-                    position='br'
-                    title={`确定要删除「${tag}」吗？`}
-                    onOk={() => deleteTag(_id, tag)}
-                    okText='Yes'
-                    cancelText='No'
-                  >
-                    <IconDelete className={s.iconBtn} />
-                  </Popconfirm>
-                </div>
-              )
-            )
+                  <IconDelete className={s.iconBtn} />
+                </Popconfirm>
+              </div>
+            ))
           )}
         </div>
       </div>
       <CustomModal
         isEdit={true}
-        isModalOpen={isModalOpen}
-        DBType={DB.Tag}
+        isModalOpen={!!editing}
+        name='标签'
         modalOk={modalOk}
-        modalCancel={modalCancel}
-        render={() => (
-          <Input size='default' value={tag} onChange={value => setTag(value)} />
-        )}
-      />
+        modalCancel={() => setEditing(null)}
+      >
+        <Input
+          size='default'
+          value={editing?.name ?? ''}
+          onChange={name => setEditing(prev => prev && { ...prev, name })}
+          onPressEnter={modalOk}
+        />
+      </CustomModal>
     </>
   );
 };

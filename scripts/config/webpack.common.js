@@ -1,60 +1,16 @@
 const path = require('path');
+const webpack = require('webpack');
 const WebpackBar = require('webpackbar');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
-const { ROOT_PATH } = require('../constant');
+const { ROOT_PATH, PUBLIC_PATH } = require('../constant');
 const { isDevelopment, isProduction } = require('../env');
 
-const getCssLoaders = (module = false) => {
-  const options = {
-    sourceMap: isDevelopment
-  };
-
-  if (!module) {
-    options.modules = {
-      localIdentName: '[local]--[hash:base64:5]'
-    };
-  }
-
-  const cssLoaders = [
-    // 开发模式使用style-loader，生产模式MiniCssExtractPlugin.loader
-    isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
-    {
-      loader: 'css-loader',
-      options
-    }
-  ];
-
-  // 加css前缀的loader配置
-  const postcssLoader = {
-    loader: 'postcss-loader',
-    options: {
-      postcssOptions: {
-        plugins: [
-          isProduction && [
-            'postcss-preset-env',
-            {
-              autoprefixer: {
-                grid: true
-              }
-            }
-          ]
-        ]
-      }
-    }
-  };
-
-  // 生产模式时，才需要加css前缀
-  isProduction && cssLoaders.push(postcssLoader);
-
-  return cssLoaders;
-};
-
-const getCustomLoaders = () => {
+// modules 为 true 时启用 CSS Modules（默认导出类名映射）
+const getCssLoaders = (modules = true) => {
   const cssLoaders = [
     isDevelopment
       ? 'style-loader'
@@ -62,34 +18,36 @@ const getCustomLoaders = () => {
     {
       loader: 'css-loader',
       options: {
+        modules: modules
+          ? {
+              // 模块化类名，防止重复
+              localIdentName: '[local]--[hash:base64:10]',
+              namedExport: false,
+              exportLocalsConvention: 'as-is'
+            }
+          : false,
         sourceMap: isDevelopment
       }
     }
   ];
 
-  // 加css前缀的loader配置
-  const postcssLoader = {
-    loader: 'postcss-loader',
-    options: {
-      postcssOptions: {
-        plugins: [
-          isProduction && [
-            'postcss-preset-env',
-            {
-              autoprefixer: {
-                grid: true
-              }
-            }
-          ]
-        ]
-      }
-    }
-  };
-
   // 生产模式时，才需要加css前缀
-  isProduction && cssLoaders.push(postcssLoader);
+  isProduction &&
+    cssLoaders.push({
+      loader: 'postcss-loader',
+      options: {
+        postcssOptions: {
+          plugins: [['postcss-preset-env', { autoprefixer: { grid: true } }]]
+        }
+      }
+    });
 
   return cssLoaders;
+};
+
+const sassLoader = {
+  loader: 'sass-loader',
+  options: { sourceMap: isDevelopment }
 };
 
 module.exports = {
@@ -97,12 +55,18 @@ module.exports = {
     index: path.resolve(ROOT_PATH, './src/index')
   },
 
+  output: {
+    // 自动删除上一次打包的产物
+    clean: true
+  },
+
   plugins: [
     // html模板
     new HtmlWebpackPlugin({
       template: path.resolve(ROOT_PATH, './public/index.html'),
       filename: 'index.html',
-      inject: 'body'
+      inject: 'body',
+      templateParameters: { PUBLIC_PATH }
     }),
     // 打包显示进度条
     new WebpackBar(),
@@ -120,64 +84,45 @@ module.exports = {
           from: 'assets/*',
           to: path.resolve(ROOT_PATH, './build'),
           toType: 'dir',
+          noErrorOnMissing: true,
           globOptions: {
             dot: true,
-            gitignore: true,
             ignore: ['**/index.html'] // **表示任意目录下
           }
         }
       ]
     }),
-    // 自动删除上一次打包的产物
-    new CleanWebpackPlugin()
+    // 接口地址，默认与前端同源（开发时由 devServer 代理，生产由网关转发）
+    new webpack.DefinePlugin({
+      'process.env.API_BASE': JSON.stringify(process.env.API_BASE || '/api/v1'),
+      'process.env.PUBLIC_PATH': JSON.stringify(PUBLIC_PATH),
+      // 博客前台地址；生产环境与后台同域名部署，默认就是根路径
+      'process.env.BLOG_URL': JSON.stringify(
+        process.env.BLOG_URL || (isDevelopment ? 'http://localhost:3000' : '/')
+      )
+    })
   ],
 
   module: {
     rules: [
       {
         test: /\.css$/,
+        include: /node_modules/,
+        use: getCssLoaders(false)
+      },
+      {
+        test: /\.css$/,
         exclude: /node_modules/,
         use: getCssLoaders()
       },
       {
-        test: /\.less$/,
-        // exclude: /node_modules/,
-        use: [
-          ...getCssLoaders(true),
-          {
-            loader: 'less-loader',
-            options: {
-              sourceMap: isDevelopment
-            }
-          }
-        ]
-      },
-      {
         test: /\.scss$/,
         exclude: [/node_modules/, /\.custom.scss$/],
-        use: [
-          ...getCssLoaders(),
-          {
-            loader: 'sass-loader',
-            options: {
-              implementation: require('sass'),
-              sourceMap: isDevelopment
-            }
-          }
-        ]
+        use: [...getCssLoaders(), sassLoader]
       },
       {
         test: /\.custom.scss$/,
-        use: [
-          ...getCustomLoaders(),
-          {
-            loader: 'sass-loader',
-            options: {
-              implementation: require('sass'),
-              sourceMap: isDevelopment
-            }
-          }
-        ]
+        use: [...getCssLoaders(false), sassLoader]
       },
       {
         test: /\.(tsx?|js)$/, // ts\tsx\js
@@ -209,7 +154,8 @@ module.exports = {
       '@': path.resolve(ROOT_PATH, './src')
     },
     // 若没有写后缀时，依次从数组中查找相应后缀文件是否存在
-    extensions: ['.tsx', '.ts', '.js', '.json']
+    extensions: ['.tsx', '.ts', '.js', '.json'],
+    fallback: { crypto: false }
   },
 
   // 缓存

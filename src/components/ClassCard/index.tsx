@@ -1,182 +1,76 @@
 import { Button, Input, Message, Popconfirm } from '@arco-design/web-react';
 import { IconDelete, IconEdit, IconLoading } from '@arco-design/web-react/icon';
-import { useRequest, useResetState } from 'ahooks';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
-import { selectArticle, selectClass } from '@/redux/selectors';
-import { resetArticleData } from '@/redux/slices/articles';
-import { setClasses } from '@/redux/slices/classes';
-import { resetDraftData } from '@/redux/slices/drafts';
-import { addDataAPI } from '@/utils/apis/addData';
-import { deleteDataAPI } from '@/utils/apis/deleteData';
-import { getDataAPI } from '@/utils/apis/getData';
-import { updateDataAPI } from '@/utils/apis/updateData';
-import { updateWhereDataAPI } from '@/utils/apis/updateWhereData';
-import { _, isAdmin } from '@/utils/cloudBase';
-import { failText, visitorText } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
+import type { CategoryList } from '@/utils/api';
+import { categoryApi } from '@/utils/api';
+import { mutate } from '@/utils/feedback';
 
 import CustomModal from '../CustomModal';
 import s from './index.scss';
 
 const { Search } = Input;
-const noClassId = '000xxx000';
 
-const ClassCard: React.FC = () => {
+interface Props {
+  categories?: CategoryList;
+  loading: boolean;
+  onChanged: () => void;
+}
+
+const ClassCard: React.FC<Props> = ({ categories, loading, onChanged }) => {
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [id, setId] = useState('');
-  const [oldClassText, setOldClassText] = useState('');
-  const [classText, setClassText] = useState('');
-  const [newClassText, setNewClassText, resetNewClassText] = useResetState('');
+  const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
+  const [newName, setNewName] = useState('');
 
-  const classes = useSelector(selectClass);
-  const articles = useSelector(selectArticle);
-  const dispatch = useDispatch();
+  const items = categories?.items ?? [];
+  const isExist = (name: string, exceptId = 0) =>
+    items.some(c => c.name === name && c.id !== exceptId);
 
-  const { loading, run } = useRequest(() => getDataAPI(DB.Class), {
-    retryCount: 3,
-    manual: true,
-    onSuccess: res => {
-      dispatch(setClasses(res.data));
-    }
-  });
-
-  const isExist = (
-    content: string,
-    data: { class?: string; tag?: string }[],
-    type: 'class' | 'tag'
-  ) => {
-    return data.some(item => item[type as keyof typeof item] === content);
-  };
-
-  const openModal = (id: string) => {
-    setIsModalOpen(true);
-    setId(id);
-    for (const { _id, class: classText } of classes.value) {
-      if (id === _id) {
-        setClassText(classText);
-        setOldClassText(classText);
-        break;
-      }
-    }
-  };
-
-  const modalCancel = () => {
-    setIsModalOpen(false);
-  };
-
-  const modalOk = () => {
-    if (!classText) {
+  const modalOk = async () => {
+    if (!editing) return;
+    const name = editing.name.trim();
+    if (!name) {
       Message.warning('请输入分类名称~');
       return;
     }
-    if (isExist(classText, classes.value, 'class')) {
+    if (isExist(name, editing.id)) {
       Message.warning('分类名称已存在~');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+    if (await mutate(() => categoryApi.update(editing.id, { name }), '修改成功！')) {
+      setEditing(null);
+      onChanged();
     }
-    updateDataAPI(DB.Class, id, { class: classText }).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('修改成功！');
-        modalCancel();
-        flushSync(() => run());
-        updateClassFromDB(oldClassText, classText);
-      } else {
-        Message.warning(failText);
-      }
-    });
   };
 
-  const addNewClass = () => {
-    if (!newClassText) {
+  const addNewClass = async () => {
+    const name = newName.trim();
+    if (!name) {
       Message.warning('请输入分类名称~');
       return;
     }
-    if (isExist(newClassText, classes.value, 'class')) {
+    if (isExist(name)) {
       Message.warning('分类名称已存在~');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+    if (await mutate(() => categoryApi.create({ name }), '添加成功！')) {
+      setNewName('');
+      onChanged();
     }
-    addDataAPI(DB.Class, { class: newClassText, count: 0, date: Date.now() }).then(
-      res => {
-        if (!res.success && !res.permission) {
-          Message.warning(visitorText);
-        } else if (res.success && res.permission) {
-          Message.success('添加成功！');
-          resetNewClassText();
-          flushSync(() => run());
-        } else {
-          Message.warning(failText);
-        }
-      }
-    );
   };
 
-  const updateClassFromDB = (oldClassText: string, newClassText: string) => {
-    updateWhereDataAPI(
-      DB.Article,
-      { classes: _.eq(oldClassText) },
-      { classes: newClassText }
-    ).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success(`更新数据库分类成功！`);
-        dispatch(resetArticleData());
-        dispatch(resetDraftData());
-      } else {
-        Message.warning(failText);
-      }
-    });
-  };
-
-  const deleteClass = (id: string, classText: string) => {
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+  const deleteClass = async (id: number) => {
+    if (await mutate(() => categoryApi.remove(id), '删除成功！')) {
+      onChanged();
     }
-    deleteDataAPI(DB.Class, id).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('删除成功！');
-        flushSync(() => run());
-        updateClassFromDB(classText, '');
-      } else {
-        Message.warning(failText);
-      }
-    });
   };
 
-  const toArticle = (classText: string) => {
-    navigate(`/admin/article?searchClass=${encodeURIComponent(classText)}`);
-  };
-
-  const getNoClass = () => {
-    let sum = 0;
-    classes.value.forEach((item: any) => {
-      sum += item.count;
-    });
-
-    return {
-      _id: noClassId,
-      class: '未分类',
-      count: `${articles.count.value - sum}`
-    };
-  };
+  const rows = [
+    ...items,
+    { id: 0, name: '未分类', articleCount: categories?.uncategorizedCount ?? 0 }
+  ];
 
   return (
     <>
@@ -187,75 +81,68 @@ const ClassCard: React.FC = () => {
           allowClear
           placeholder='新建分类'
           searchButton='创建'
-          value={newClassText}
-          onChange={(value: string) => setNewClassText(value)}
+          value={newName}
+          onChange={(value: string) => setNewName(value)}
           onSearch={addNewClass}
         />
         <div className={classNames(s.classesBox, { [s.classLoading]: loading })}>
           {loading ? (
             <IconLoading />
           ) : (
-            [...classes.value, getNoClass()].map(
-              ({
-                _id,
-                class: classText,
-                count
-              }: {
-                _id: string;
-                class: string;
-                count: number;
-              }) => (
-                <div key={_id} className={s.classItem}>
-                  <div className={s.count}>{count}</div>
-                  <div className={s.classTextBox}>
-                    <div className={s.classText} onClick={() => toArticle(classText)}>
-                      《{classText}》
-                    </div>
-                  </div>
-                  <Button
-                    type='primary'
-                    className={s.classBtn}
-                    icon={<IconEdit />}
-                    onClick={() => openModal(_id)}
-                    disabled={_id === noClassId}
-                  />
-                  <Popconfirm
-                    position='br'
-                    title={`确定要删除《${classText}》吗？`}
-                    onOk={() => deleteClass(_id, classText)}
-                    okText='Yes'
-                    cancelText='No'
-                    disabled={_id === noClassId}
+            rows.map(({ id, name, articleCount }) => (
+              <div key={id} className={s.classItem}>
+                <div className={s.count}>{articleCount}</div>
+                <div className={s.classTextBox}>
+                  <div
+                    className={s.classText}
+                    onClick={() => id && navigate(`/article?categoryId=${id}`)}
                   >
-                    <Button
-                      style={{ width: 30, height: 30 }}
-                      type='primary'
-                      status='danger'
-                      className={s.classBtn}
-                      icon={<IconDelete />}
-                      disabled={_id === noClassId}
-                    />
-                  </Popconfirm>
+                    《{name}》
+                  </div>
                 </div>
-              )
-            )
+                <Button
+                  type='primary'
+                  className={s.classBtn}
+                  icon={<IconEdit />}
+                  onClick={() => setEditing({ id, name })}
+                  disabled={!id}
+                />
+                <Popconfirm
+                  position='br'
+                  title={`确定要删除《${name}》吗？其下文章将变为未分类。`}
+                  onOk={() => deleteClass(id)}
+                  okText='Yes'
+                  cancelText='No'
+                  disabled={!id}
+                >
+                  <Button
+                    style={{ width: 30, height: 30 }}
+                    type='primary'
+                    status='danger'
+                    className={s.classBtn}
+                    icon={<IconDelete />}
+                    disabled={!id}
+                  />
+                </Popconfirm>
+              </div>
+            ))
           )}
         </div>
       </div>
       <CustomModal
         isEdit={true}
-        isModalOpen={isModalOpen}
-        DBType={DB.Class}
+        isModalOpen={!!editing}
+        name='分类'
         modalOk={modalOk}
-        modalCancel={modalCancel}
-        render={() => (
-          <Input
-            size='default'
-            value={classText}
-            onChange={value => setClassText(value)}
-          />
-        )}
-      />
+        modalCancel={() => setEditing(null)}
+      >
+        <Input
+          size='default'
+          value={editing?.name ?? ''}
+          onChange={name => setEditing(prev => prev && { ...prev, name })}
+          onPressEnter={modalOk}
+        />
+      </CustomModal>
     </>
   );
 };

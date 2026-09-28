@@ -15,7 +15,7 @@ const EmojiItem: React.FC<Props> = ({ emojis }) => {
         <div
           className={s.emoji}
           key={index}
-          onClick={() => copy(item) && Message.success('已复制到剪切板!')}
+          onClick={() => copy(item).then(ok => ok && Message.success('已复制到剪切板!'))}
         >
           {item}
         </div>

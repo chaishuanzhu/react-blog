@@ -1,4 +1,4 @@
-@import '../../styles/base.scss';
+@use '../../styles/base.scss' as *;
 
 .loadingBox {
   height: calc(100vh - 62px - 10px * 2);

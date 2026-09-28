@@ -1,21 +1,20 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 
-import { auth } from '@/utils/cloudBase';
+import { getToken } from '@/utils/api';
 
 interface Props {
   requireLogin: boolean;
   to: string;
-  children: any;
+  children: React.ReactNode;
 }
 
-export default ({ requireLogin, to, children }: Props) => {
+const RequireAuth: React.FC<Props> = ({ requireLogin, to, children }) => {
   const location = useLocation();
-  const isLogin = auth.hasLoginState();
+  const isLogin = !!getToken();
 
-  if (requireLogin) {
-    return isLogin ? children : <Navigate to={to} state={{ from: location }} replace />;
-  } else {
-    return isLogin ? <Navigate to={to} state={{ from: location }} replace /> : children;
-  }
+  if (requireLogin === isLogin) return children;
+  return <Navigate to={to} state={{ from: location }} replace />;
 };
+
+export default RequireAuth;

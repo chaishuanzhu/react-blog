@@ -1,43 +1,47 @@
 import './hljs.custom.scss';
 
 import classNames from 'classnames';
+import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
-import { marked } from 'marked';
-import React, { forwardRef } from 'react';
+import { Marked } from 'marked';
+import { markedHighlight } from 'marked-highlight';
+import React, { useMemo } from 'react';
 
 import s from './index.scss';
 
 interface Props {
   content: string;
   className?: string;
-  style?: object;
-  onScroll?: (e: any) => void;
+  style?: React.CSSProperties;
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
-hljs.configure({
-  classPrefix: 'hljs-',
-  languages: ['CSS', 'HTML', 'JavaScript', 'TypeScript', 'Markdown']
-});
+const marked = new Marked(
+  markedHighlight({
+    highlight: (code, lang) =>
+      lang && hljs.getLanguage(lang)
+        ? hljs.highlight(code, { language: lang }).value
+        : hljs.highlightAuto(code).value
+  }),
+  { gfm: true, breaks: true }
+);
 
-marked.setOptions({
-  renderer: new marked.Renderer(),
-  highlight: code => hljs.highlightAuto(code).value,
-  gfm: true, // 默认为true。 允许 Git Hub标准的markdown.
-  breaks: true // 默认为false。 允许回车换行。该选项要求 gfm 为true。
-});
+const MarkDown: React.FC<Props> = ({ content = '', className, onScroll, style, ref }) => {
+  const html = useMemo(() => {
+    const raw = marked.parse(content, { async: false }).replace(/<pre>/g, "<pre id='hljs'>");
+    return DOMPurify.sanitize(raw);
+  }, [content]);
 
-const MarkDown = ({ content = '', className, onScroll, style = {} }: Props, ref: any) => {
   return (
     <div
       style={style}
       ref={ref}
       onScroll={onScroll}
       className={classNames(s.markdownBox, className)}
-      dangerouslySetInnerHTML={{
-        __html: marked(content).replace(/<pre>/g, "<pre id='hljs'>")
-      }}
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 };
 
-export default forwardRef(MarkDown);
+export default MarkDown;

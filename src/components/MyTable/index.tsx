@@ -1,4 +1,5 @@
-import { Pagination, Table, TableColumnProps } from '@arco-design/web-react';
+import type { TableColumnProps } from '@arco-design/web-react';
+import { Pagination, Table } from '@arco-design/web-react';
 import classNames from 'classnames';
 import React from 'react';
 
@@ -6,10 +7,10 @@ import { defaultPageSize } from '@/utils/constant';
 
 import s from './index.scss';
 
-interface Props {
+interface Props<T> {
   loading: boolean;
-  columns: TableColumnProps[];
-  data: any[];
+  columns: TableColumnProps<T>[];
+  data: T[];
   total: number;
   page: number;
   pageSize?: number;
@@ -17,7 +18,7 @@ interface Props {
   setPage: (page: number) => void;
 }
 
-const MyTable: React.FC<Props> = ({
+const MyTable = <T extends { id: number }>({
   loading,
   columns,
   data,
@@ -26,7 +27,7 @@ const MyTable: React.FC<Props> = ({
   pageSize = defaultPageSize,
   noHeader = false,
   setPage
-}) => (
+}: Props<T>) => (
   <>
     <div className={classNames(s.myTableBox, { [s.noHeader]: noHeader })}>
       <Table
@@ -35,9 +36,8 @@ const MyTable: React.FC<Props> = ({
         loading={loading}
         columns={columns}
         data={data}
-        rowKey={columns => columns._id}
+        rowKey='id'
         showSorterTooltip={false}
-        pagePosition='bottomCenter'
         className={s.myTable}
         pagination={false}
       />

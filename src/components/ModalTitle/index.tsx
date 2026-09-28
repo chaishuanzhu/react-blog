@@ -1,22 +1,19 @@
 import React from 'react';
 
-import { dataMap } from '@/utils/dataMap';
-import { DB } from '@/utils/dbConfig';
-
 import s from './index.scss';
 
 interface Props {
   isEdit: boolean;
-  type: DB;
+  name: string;
   addText: string;
   updateText: string;
 }
 
-const ModalTitle: React.FC<Props> = ({ isEdit, type, addText, updateText }) => {
+const ModalTitle: React.FC<Props> = ({ isEdit, name, addText, updateText }) => {
   return (
     <div className={s.ModalTitleBox}>
       <div className={s.ModalTitleCustom}>{isEdit ? updateText : addText}</div>
-      {dataMap[type as keyof typeof dataMap]}
+      {name}
     </div>
   );
 };

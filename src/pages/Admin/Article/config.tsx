@@ -1,73 +1,64 @@
+import type { TableColumnProps } from '@arco-design/web-react';
 import { Button, Popconfirm, Tag } from '@arco-design/web-react';
 import dayjs from 'dayjs';
 import React from 'react';
 
 import TableTag from '@/components/TableTag';
-import { DeleteProps } from '@/utils/hooks/useTableData';
+import type { AdminArticle, NamedRef } from '@/utils/api';
+import { blogLink, dateTimeFormat } from '@/utils/constant';
 
 interface Props {
-  showSearchData: boolean;
-  handleEdit: (id: string) => void;
-  handleDelete: (id: string, props: DeleteProps) => void;
-  handleDeleteSearch: (id: string, props: DeleteProps) => void;
-  deleteProps: DeleteProps;
+  isDraft: boolean;
+  handleEdit: (id: number) => void;
+  handleDelete: (id: number) => void;
 }
 
 export const useColumns = ({
+  isDraft,
   handleEdit,
-  handleDelete,
-  deleteProps,
-  showSearchData,
-  handleDeleteSearch
-}: Props) => [
+  handleDelete
+}: Props): TableColumnProps<AdminArticle>[] => [
   {
     title: '标题',
     dataIndex: 'title',
     render: (title: string) => <strong>{title}</strong>
   },
   {
-    title: '发布日期',
-    dataIndex: 'date',
-    render: (timeLine: string) => <>{dayjs(timeLine).format('YYYY-MM-DD HH:mm:ss')}</>
+    title: isDraft ? '保存日期' : '发布日期',
+    dataIndex: isDraft ? 'updatedAt' : 'publishedAt',
+    render: (time: string) => <>{dayjs(time).format(dateTimeFormat)}</>
   },
   {
     title: '分类',
-    dataIndex: 'classes',
-    render: (classText: string) => (
-      <>{classText ? <Tag color='#2db7f5'>{classText}</Tag> : null}</>
-    )
+    dataIndex: 'category',
+    render: (category: NamedRef | null) =>
+      category ? <Tag color='#2db7f5'>{category.name}</Tag> : null
   },
   {
     title: '标签',
     dataIndex: 'tags',
-    render: (tags: string[]) => <TableTag tags={tags} />
+    render: (tags: NamedRef[]) => <TableTag tags={tags.map(t => t.name)} />
   },
   {
     title: '操作',
-    render: (_: any, { _id, url }: { _id: string; url: string }) => (
+    render: (_: unknown, { id }: AdminArticle) => (
       <>
-        <Button
-          type='primary'
-          style={{ marginRight: 10 }}
-          onClick={() => window.open(url)}
-        >
-          查看
-        </Button>
-        <Button
-          type='primary'
-          style={{ marginRight: 10 }}
-          onClick={() => handleEdit(_id)}
-        >
+        {!isDraft && (
+          <Button
+            type='primary'
+            style={{ marginRight: 10 }}
+            onClick={() => window.open(blogLink(`/post/${id}`))}
+          >
+            查看
+          </Button>
+        )}
+        <Button type='primary' style={{ marginRight: 10 }} onClick={() => handleEdit(id)}>
           编辑
         </Button>
         <Popconfirm
           position='br'
           title='确定要删除该文章吗？'
-          onOk={() => {
-            showSearchData
-              ? handleDeleteSearch(_id, deleteProps)
-              : handleDelete(_id, deleteProps);
-          }}
+          onOk={() => handleDelete(id)}
           okText='Yes'
           cancelText='No'
         >

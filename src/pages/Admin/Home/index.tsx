@@ -1,4 +1,4 @@
-import { useTitle } from 'ahooks';
+import { useRequest, useTitle } from 'ahooks';
 import React from 'react';
 
 import ChartCard from '@/components/ChartCard';
@@ -6,76 +6,49 @@ import ClassCard from '@/components/ClassCard';
 import CountCard from '@/components/CountCard';
 import NoticeCard from '@/components/NoticeCard';
 import TagCard from '@/components/TagCard';
-import {
-  selectArticle,
-  selectLink,
-  selectLog,
-  selectMsg,
-  selectSay
-} from '@/redux/selectors';
-import { setArticleCount } from '@/redux/slices/articles';
-import { setLinkCount } from '@/redux/slices/links';
-import { setLogCount } from '@/redux/slices/logs';
-import { setMsgCount } from '@/redux/slices/msgs';
-import { setSayCount } from '@/redux/slices/says';
-import { _ } from '@/utils/cloudBase';
+import type { Stats } from '@/utils/api';
+import { categoryApi, getStats } from '@/utils/api';
 import { siteTitle } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
 
 import s from './index.scss';
 
+const countCards: { label: string; key: keyof Stats }[] = [
+  { label: '文章数', key: 'publishedCount' },
+  { label: '说说数', key: 'momentCount' },
+  { label: '留言数', key: 'commentCount' },
+  { label: '友链数', key: 'friendLinkCount' },
+  { label: '访问量', key: 'viewCount' }
+];
+
 const Home: React.FC = () => {
   useTitle(siteTitle);
-  const countCards = [
-    {
-      DBName: DB.Article,
-      where: { post: _.eq(true) },
-      selector: selectArticle,
-      reducer: setArticleCount
-    },
-    {
-      DBName: DB.Say,
-      selector: selectSay,
-      reducer: setSayCount
-    },
-    {
-      DBName: DB.Msg,
-      selector: selectMsg,
-      reducer: setMsgCount
-    },
-    {
-      DBName: DB.Link,
-      selector: selectLink,
-      reducer: setLinkCount
-    },
-    {
-      DBName: DB.Log,
-      selector: selectLog,
-      reducer: setLogCount
-    }
-  ];
+
+  const { data: stats, loading: statsLoading } = useRequest(getStats);
+  const {
+    data: categories,
+    loading: categoriesLoading,
+    refresh: refreshCategories
+  } = useRequest(categoryApi.list);
 
   return (
     <>
       {/* 统计卡片区 */}
       <div className={s.countCardContainer}>
-        {countCards.map(({ DBName, where = {}, selector, reducer }, index) => (
-          <CountCard
-            key={index}
-            DBName={DBName}
-            where={where}
-            selector={selector}
-            reducer={reducer}
-          />
+        {countCards.map(({ label, key }) => (
+          <CountCard key={key} label={label} value={stats?.[key]} loading={statsLoading} />
         ))}
       </div>
       {/* 扇形图、分类、标签、公告 */}
       <div className={s.homeBigContainer}>
         <div className={s.chartContainer}>
-          <ChartCard />
+          <ChartCard categories={categories} loading={categoriesLoading} />
         </div>
         <div className={s.classesContainer}>
-          <ClassCard />
+          <ClassCard
+            categories={categories}
+            loading={categoriesLoading}
+            onChanged={refreshCategories}
+          />
         </div>
         <div className={s.tagsNoticeContainer}>
           <div className={s.NoticeContainer}>

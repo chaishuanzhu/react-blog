@@ -1,13 +1,12 @@
 import classNames from 'classnames';
 import React from 'react';
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes } from 'react-router';
 
 import Header from '@/components/Header';
-import RequireAuth from '@/components/RequireAuth';
 import WithLoading from '@/components/WithLoading';
-import { oldVersionUrl } from '@/utils/constant';
 
-import { RouteType, useRoutes } from './config';
+import type { RouteType } from './config';
+import { useRoutes } from './config';
 import s from './index.scss';
 
 const Admin: React.FC = () => {
@@ -23,7 +22,7 @@ const Admin: React.FC = () => {
             return item.disPlayName ? (
               <div key={item.path} className={s.liItem}>
                 <NavLink
-                  to={`/admin/${item.path}`}
+                  to={`/${item.path}`}
                   className={({ isActive }) =>
                     isActive ? classNames(s.navItem, s.navItemActive) : s.navItem
                   }
@@ -34,26 +33,15 @@ const Admin: React.FC = () => {
               </div>
             ) : null;
           })}
-          <a href={oldVersionUrl} className={s.turnOldVer}>
-            返回旧版
-          </a>
         </nav>
-        {/* 右侧内容区域= */}
+        {/* 右侧内容区域 */}
         <div className={s.rightContent}>
           <WithLoading>
             <Routes>
               {routes.map((item: RouteType) => (
-                <Route
-                  key={item.path}
-                  path={item.path}
-                  element={
-                    <RequireAuth requireLogin={true} to='/'>
-                      {item.element}
-                    </RequireAuth>
-                  }
-                />
+                <Route key={item.path} path={item.path} element={item.element} />
               ))}
-              <Route path='*' element={<Navigate to='home' />} />
+              <Route path='*' element={<Navigate to='/home' replace />} />
             </Routes>
           </WithLoading>
         </div>

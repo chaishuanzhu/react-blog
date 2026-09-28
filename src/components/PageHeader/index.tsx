@@ -1,21 +1,21 @@
 import { Button } from '@arco-design/web-react';
-import React, { MouseEventHandler } from 'react';
+import React from 'react';
 
 import s from './index.scss';
 
 interface Props {
   text: string;
-  onClick: (e: Event) => void;
-  render?: () => React.ReactNode;
+  onClick: () => void;
+  children?: React.ReactNode;
 }
 
-const PageHeader: React.FC<Props> = ({ text, onClick, render }) => {
+const PageHeader: React.FC<Props> = ({ text, onClick, children }) => {
   return (
     <div className={s.pageHeaderBox}>
       <Button type='primary' size='large' onClick={onClick}>
         {text}
       </Button>
-      {render && <>{render()}</>}
+      {children}
     </div>
   );
 };

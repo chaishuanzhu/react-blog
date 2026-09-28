@@ -1,17 +1,14 @@
 import { Button, Message } from '@arco-design/web-react';
-import { useMount, useTitle } from 'ahooks';
+import { useRequest, useTitle } from 'ahooks';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import MarkDown from '@/components/MarkDown';
 import PageHeader from '@/components/PageHeader';
-import { selectAbout } from '@/redux/selectors';
-import { updateDataAPI } from '@/utils/apis/updateData';
-import { isAdmin } from '@/utils/cloudBase';
-import { failText, siteTitle, visitorText } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
+import { pageApi } from '@/utils/api';
+import { siteTitle } from '@/utils/constant';
+import { mutate } from '@/utils/feedback';
 import { useScrollSync } from '@/utils/hooks/useScrollSync';
 
 import { Title } from '../titleConfig';
@@ -22,56 +19,33 @@ const AboutEdit: React.FC = () => {
   const navigate = useNavigate();
 
   const isMe = searchParams.get('me') === '1';
+  const key = isMe ? 'about-me' : 'about-site';
 
   useTitle(`${siteTitle} | ${isMe ? Title.AboutMe : Title.AboutSite}`);
 
   const { leftRef, rightRef, handleScrollRun } = useScrollSync();
-
   const [content, setContent] = useState('');
-  const [id, setId] = useState('');
 
-  const about = useSelector(selectAbout);
+  useRequest(() => pageApi.get(key), { onSuccess: setContent });
 
-  useMount(() => {
-    const aboutContent = isMe ? about.aboutMe.value : about.aboutSite.value;
-    const id = isMe ? about.aboutMe.id : about.aboutSite.id;
-    setContent(aboutContent);
-    setId(id);
-  });
-
-  const updateAbout = () => {
-    if (!content) {
+  const updateAbout = async () => {
+    if (!content.trim()) {
       Message.info('请写点什么再更新！');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+    if (await mutate(() => pageApi.update(key, content), '更新成功！')) {
+      navigate('/about');
     }
-    updateDataAPI(DB.About, id, { content }).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('更新成功！');
-        navigate(`/admin/about?updated=1`);
-      } else {
-        Message.warning(failText);
-      }
-    });
   };
-
-  const render = () => (
-    <>
-      <div className={s.aboutTitle}>关于{isMe ? '我' : '本站'}</div>
-      <Button size='large' type='primary' className={s.aboutUpdate} onClick={updateAbout}>
-        更新
-      </Button>
-    </>
-  );
 
   return (
     <>
-      <PageHeader text='返回' onClick={() => navigate('/admin/about')} render={render} />
+      <PageHeader text='返回' onClick={() => navigate('/about')}>
+        <div className={s.aboutTitle}>关于{isMe ? '我' : '本站'}</div>
+        <Button size='large' type='primary' className={s.aboutUpdate} onClick={updateAbout}>
+          更新
+        </Button>
+      </PageHeader>
       <div className={s.markedEditBox}>
         <textarea
           ref={leftRef}

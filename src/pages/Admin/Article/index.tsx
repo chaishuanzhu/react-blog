@@ -1,308 +1,118 @@
 import './index.custom.scss';
 
-import { Button, Input, Message, Select } from '@arco-design/web-react';
-import { useMount, useRequest, useTitle } from 'ahooks';
+import { Button, Input, Select } from '@arco-design/web-react';
+import { useRequest, useTitle } from 'ahooks';
 import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
 import { BiBrushAlt, BiSearch } from 'react-icons/bi';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import MyTable from '@/components/MyTable';
 import PageHeader from '@/components/PageHeader';
-import { selectClass, selectTag } from '@/redux/selectors';
-import { resetClasses, setClasses } from '@/redux/slices/classes';
-import { resetDraftData } from '@/redux/slices/drafts';
-import { setTags } from '@/redux/slices/tags';
-import { deleteDataAPI } from '@/utils/apis/deleteData';
-import { getDataAPI } from '@/utils/apis/getData';
-import { getWhereDataAPI } from '@/utils/apis/getWhereData';
-import { _, isAdmin } from '@/utils/cloudBase';
-import { defaultPageSize, failText, siteTitle, visitorText } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
-import { classCountChange, getAfterDeletedPage, isSubset } from '@/utils/functions';
-import { useMyParams } from '@/utils/hooks/useMyParams';
-import { usePage } from '@/utils/hooks/usePage';
-import { DeleteProps, useTableData } from '@/utils/hooks/useTableData';
-import { useUpdateData } from '@/utils/hooks/useUpdateData';
-import { reduxMap } from '@/utils/reduxMap';
+import { categoryApi, tagApi } from '@/utils/api';
+import { siteTitle } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
-import { useColumns } from './config';
 import s from './index.scss';
+import { useArticleTable } from './useArticleTable';
+
+const toId = (raw: string | null) => (raw ? Number(raw) || undefined : undefined);
 
 const Article: React.FC = () => {
   useTitle(`${siteTitle} | ${Title.Articles}`);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { page, setPage } = usePage();
-  const [showSearchData, setShowSearchData] = useState(false);
-  const [searchData, setSearchData] = useState<any[]>([]);
+  const keyword = searchParams.get('keyword') || undefined;
+  const categoryId = toId(searchParams.get('categoryId'));
+  const tagId = toId(searchParams.get('tagId'));
+  const [keywordInput, setKeywordInput] = useState(keyword ?? '');
 
-  const {
-    searchTitle,
-    searchClass,
-    searchTag,
-    setSearchTitle,
-    setSearchClass,
-    setSearchTag,
-    clearSearch
-  } = useMyParams();
+  const { data: categories, loading: classLoading } = useRequest(categoryApi.list);
+  const { data: tags = [], loading: tagLoading } = useRequest(tagApi.list);
 
-  const classes = useSelector(selectClass);
-  const tags = useSelector(selectTag);
-
-  const dispatch = useDispatch();
-
-  const { loading: classLoading, run: classesRun } = useRequest(
-    () => getDataAPI(DB.Class),
-    {
-      retryCount: 3,
-      manual: true,
-      onSuccess: res => {
-        dispatch(setClasses(res.data));
-      }
-    }
-  );
-
-  const { loading: tagLoading, run: tagsRun } = useRequest(() => getDataAPI(DB.Tag), {
-    retryCount: 3,
-    manual: true,
-    onSuccess: res => {
-      dispatch(setTags(res.data));
-    }
+  const { columns, data, total, loading, page, setPage } = useArticleTable('published', {
+    keyword,
+    categoryId,
+    tagId
   });
 
-  useMount(() => {
-    if (!classes.isDone) {
-      classesRun();
-    }
-    if (!tags.isDone) {
-      tagsRun();
-    }
-  });
-
-  const {
-    data: articleData,
-    total: articleTotal,
-    loading: articleLoading,
-    handleDelete,
-    dataRun,
-    totalRun
-  } = useTableData({
-    type: DB.Article,
-    DBName: DB.Article,
-    page,
-    setPage,
-    where: { post: _.eq(true) },
-    classesRun
-  });
-
-  useUpdateData([
-    {
-      key: 'updated',
-      run: () => {
-        dataRun();
-        totalRun();
-      }
-    },
-    {
-      key: 'clearOther',
-      run: () => {
-        dispatch(resetDraftData());
-      }
-    }
-  ]);
-
-  const { run: searchRun, loading: searchLoading } = useRequest(
-    () => getWhereDataAPI(DB.Article, { post: _.eq(true) }),
-    {
-      manual: true,
-      retryCount: 3,
-      throttleWait: 1000,
-      onSuccess: res => {
-        const result = res.data.filter(
-          ({
-            title,
-            classes,
-            tags
-          }: {
-            title: string;
-            classes: string;
-            tags: string[];
-          }) => {
-            const titleCondition =
-              title.toLowerCase().indexOf((searchTitle || '').toLowerCase()) !== -1;
-            const tagCondition = isSubset(tags, searchTag);
-            const classCondition = searchClass
-              ? classes === (searchClass === '未分类' ? '' : searchClass)
-              : true;
-            return titleCondition && tagCondition && classCondition;
-          }
-        );
-        setSearchData(result);
-        setShowSearchData(true);
-        Message.success('搜索成功！');
-      }
-    }
-  );
-
-  useMount(() => {
-    if (searchTitle || searchClass || searchTag.length) {
-      searchRun();
-      setShowSearchData(true);
-    }
-  });
-
-  const handleEdit = (id: string) => {
-    navigate(`/admin/addArticle?id=${id}&from=article`);
-  };
-
-  const search = () => {
-    if (!searchTitle && !searchClass && !searchTag.length) {
-      Message.info('请选择搜索内容！');
-      return;
-    }
-    setPage(1);
-    searchRun();
-  };
-
-  const handleDeleteSearch = (id: string, { page, setPage }: DeleteProps) => {
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
-    }
-
-    deleteDataAPI(DB.Article, id).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('删除成功！');
-        const newSearchData = searchData.filter(({ _id }: { _id: string }) => _id !== id);
-        const classText = searchData.filter(({ _id }: { _id: string }) => _id === id)[0]
-          .classes;
-        classCountChange(classText, 'min', () => {
-          dispatch(resetClasses());
-        });
-        flushSync(() => setSearchData(newSearchData));
-        flushSync(() => {
-          dispatch(reduxMap[DB.Article].dataResetReducer());
-          setPage(getAfterDeletedPage(searchData.length, page, defaultPageSize));
-        });
-        flushSync(() => {
-          dataRun();
-          totalRun();
-        });
-      } else {
-        Message.warning(failText);
-      }
+  const setFilter = (key: string, value?: string | number) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      if (value === undefined || value === '') params.delete(key);
+      else params.set(key, String(value));
+      params.set('page', '1');
+      return params;
     });
   };
 
-  const columns = useColumns({
-    showSearchData,
-    handleEdit,
-    handleDelete,
-    handleDeleteSearch,
-    deleteProps: {
-      page,
-      setPage
-    }
-  });
-
-  const render = () => (
-    <div className={s.searchBox}>
-      <div className={s.search}>
-        <Input
-          size='large'
-          allowClear
-          style={{ flex: 1, marginRight: 10 }}
-          className='articleInputBox'
-          placeholder='输入文章标题'
-          value={searchTitle}
-          onChange={value => setSearchTitle(value)}
-          onPressEnter={search}
-        />
-        <Select
-          size='large'
-          placeholder='请选择文章分类'
-          style={{ flex: 1, marginRight: 10 }}
-          allowCreate={false}
-          showSearch
-          allowClear
-          unmountOnExit={false}
-          value={searchClass}
-          onChange={value => setSearchClass(value)}
-          disabled={classLoading}
-          options={[
-            ...classes.value.map(({ class: classText }: { class: string }) => ({
-              value: classText,
-              label: classText
-            })),
-            { value: '未分类', label: '未分类' }
-          ]}
-        />
-
-        <Select
-          placeholder='请选择文章标签'
-          size='large'
-          style={{ flex: 2, marginRight: 10 }}
-          maxTagCount={4}
-          mode='multiple'
-          allowCreate={false}
-          showSearch
-          allowClear
-          unmountOnExit={false}
-          value={searchTag}
-          onChange={value => setSearchTag(value)}
-          disabled={tagLoading}
-          options={tags.value.map(({ tag }: { tag: string }) => ({
-            value: tag,
-            label: tag
-          }))}
-        />
-      </div>
-      <div>
-        <Button
-          type='primary'
-          size='large'
-          onClick={search}
-          style={{ fontSize: 16, marginRight: 10 }}
-        >
-          <BiSearch />
-        </Button>
-        <Button
-          type='primary'
-          size='large'
-          onClick={() => {
-            flushSync(() => clearSearch());
-            flushSync(() => setPage(1));
-            setShowSearchData(false);
-          }}
-          style={{ fontSize: 16 }}
-        >
-          <BiBrushAlt />
-        </Button>
-      </div>
-    </div>
-  );
+  const clearSearch = () => {
+    setKeywordInput('');
+    setSearchParams({ page: '1' });
+  };
 
   return (
     <>
-      <PageHeader
-        text='写文章'
-        onClick={() => navigate(`/admin/addArticle`)}
-        render={render}
-      />
+      <PageHeader text='写文章' onClick={() => navigate('/addArticle')}>
+        <div className={s.searchBox}>
+          <div className={s.search}>
+            <Input
+              size='large'
+              allowClear
+              style={{ flex: 1, marginRight: 10 }}
+              className='articleInputBox'
+              placeholder='输入文章标题关键字'
+              value={keywordInput}
+              onChange={value => setKeywordInput(value)}
+              onPressEnter={() => setFilter('keyword', keywordInput.trim())}
+              onClear={() => setFilter('keyword')}
+            />
+            <Select
+              size='large'
+              placeholder='请选择文章分类'
+              style={{ flex: 1, marginRight: 10 }}
+              showSearch
+              allowClear
+              value={categoryId}
+              onChange={value => setFilter('categoryId', value)}
+              disabled={classLoading}
+              options={(categories?.items ?? []).map(({ id, name }) => ({
+                value: id,
+                label: name
+              }))}
+            />
+            <Select
+              placeholder='请选择文章标签'
+              size='large'
+              style={{ flex: 1, marginRight: 10 }}
+              showSearch
+              allowClear
+              value={tagId}
+              onChange={value => setFilter('tagId', value)}
+              disabled={tagLoading}
+              options={tags.map(({ id, name }) => ({ value: id, label: name }))}
+            />
+          </div>
+          <div>
+            <Button
+              type='primary'
+              size='large'
+              onClick={() => setFilter('keyword', keywordInput.trim())}
+              style={{ fontSize: 16, marginRight: 10 }}
+            >
+              <BiSearch />
+            </Button>
+            <Button type='primary' size='large' onClick={clearSearch} style={{ fontSize: 16 }}>
+              <BiBrushAlt />
+            </Button>
+          </div>
+        </div>
+      </PageHeader>
       <MyTable
-        loading={searchLoading || articleLoading}
+        loading={loading}
         columns={columns}
-        data={
-          showSearchData
-            ? searchData.slice(defaultPageSize * (page - 1), defaultPageSize * page)
-            : articleData
-        }
-        total={showSearchData ? searchData.length : articleTotal}
+        data={data}
+        total={total}
         page={page}
         setPage={setPage}
       />

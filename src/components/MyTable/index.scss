@@ -1,4 +1,4 @@
-@import '../../styles/style.scss';
+@use '../../styles/style.scss' as *;
 
 .myTableBox {
   height: calc(100% - (56px + 10px) - (36px + 10px));

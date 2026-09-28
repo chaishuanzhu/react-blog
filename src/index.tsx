@@ -1,29 +1,17 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
+import '@arco-design/web-react/es/_util/react-19-adapter';
+import '@arco-design/web-react/dist/css/arco.css';
 
-import store from '@/redux/store';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router';
 
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
+import { basePath } from './utils/constant';
 
-if (module?.hot) {
-  module.hot.accept();
-}
-
-const containerElement = document.getElementById('root') as HTMLElement;
-
-const root = createRoot(containerElement);
-
-const element = (
+createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
-    <Provider store={store}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </Provider>
+    <BrowserRouter basename={basePath}>
+      <App />
+    </BrowserRouter>
   </ErrorBoundary>
 );
-
-root.render(element);

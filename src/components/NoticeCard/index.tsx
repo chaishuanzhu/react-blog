@@ -1,18 +1,11 @@
 import { Input, Message } from '@arco-design/web-react';
 import { IconLoading } from '@arco-design/web-react/icon';
-import { useMount, useRequest, useResetState } from 'ahooks';
+import { useRequest } from 'ahooks';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
-import { useDispatch, useSelector } from 'react-redux';
 
-import { selectNotice } from '@/redux/selectors';
-import { setNotice } from '@/redux/slices/notice';
-import { getWhereDataAPI } from '@/utils/apis/getWhereData';
-import { updateDataAPI } from '@/utils/apis/updateData';
-import { _, isAdmin } from '@/utils/cloudBase';
-import { failText, noticeId, visitorText } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
+import { noticeApi } from '@/utils/api';
+import { mutate } from '@/utils/feedback';
 
 import CustomModal from '../CustomModal';
 import Emoji from '../Emoji';
@@ -22,78 +15,25 @@ const { TextArea } = Input;
 
 const NoticeCard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [notice, setLocalNotice, resetLocalNotice] = useResetState('');
+  const [notice, setLocalNotice] = useState('');
 
-  const reduxNotice = useSelector(selectNotice);
-  const dispatch = useDispatch();
-
-  const { loading, run } = useRequest(
-    () => getWhereDataAPI(DB.Notice, { _id: _.eq(noticeId) }),
-    {
-      retryCount: 3,
-      manual: true,
-      onSuccess: res => {
-        dispatch(setNotice(res.data[0].notice));
-      }
-    }
-  );
-
-  useMount(() => {
-    if (!reduxNotice.isDone) {
-      run();
-    }
-  });
+  const { data, loading, refresh } = useRequest(noticeApi.get);
 
   const openModal = () => {
+    setLocalNotice(data ?? '');
     setIsModalOpen(true);
-    setLocalNotice(reduxNotice.value);
   };
 
-  const modalCancel = () => {
-    setIsModalOpen(false);
-    resetLocalNotice();
-  };
-
-  const modalOk = () => {
-    if (!notice) {
+  const modalOk = async () => {
+    if (!notice.trim()) {
       Message.warning('请输入公告内容~');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
+    if (await mutate(() => noticeApi.update(notice.trim()), '修改成功！')) {
+      setIsModalOpen(false);
+      refresh();
     }
-    updateDataAPI(DB.Notice, noticeId, { notice }).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success('修改成功！');
-        modalCancel();
-        flushSync(() => run());
-      } else {
-        Message.warning(failText);
-      }
-    });
   };
-
-  const render = () => (
-    <>
-      <TextArea
-        placeholder='请输入公告内容'
-        maxLength={21 * 4}
-        allowClear
-        showWordLimit
-        value={notice}
-        onChange={value => setLocalNotice(value)}
-        autoSize={false}
-        style={{
-          height: 100,
-          resize: 'none'
-        }}
-      />
-      <Emoji style={{ marginTop: 10 }} />
-    </>
-  );
 
   return (
     <>
@@ -103,17 +43,28 @@ const NoticeCard: React.FC = () => {
           className={classNames(s.noticeText, { [s.loading]: loading })}
           onClick={openModal}
         >
-          {loading ? <IconLoading /> : reduxNotice.value}
+          {loading ? <IconLoading /> : data}
         </div>
       </div>
       <CustomModal
         isEdit={true}
         isModalOpen={isModalOpen}
-        DBType={DB.Notice}
+        name='公告'
         modalOk={modalOk}
-        modalCancel={modalCancel}
-        render={render}
-      />
+        modalCancel={() => setIsModalOpen(false)}
+      >
+        <TextArea
+          placeholder='请输入公告内容'
+          maxLength={21 * 4}
+          allowClear
+          showWordLimit
+          value={notice}
+          onChange={value => setLocalNotice(value)}
+          autoSize={false}
+          style={{ height: 100, resize: 'none' }}
+        />
+        <Emoji style={{ marginTop: 10 }} />
+      </CustomModal>
     </>
   );
 };

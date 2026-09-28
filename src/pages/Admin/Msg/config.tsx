@@ -1,27 +1,25 @@
+import type { TableColumnProps } from '@arco-design/web-react';
 import { Button, Popconfirm } from '@arco-design/web-react';
 import classNames from 'classnames';
 import dayjs from 'dayjs';
 import React from 'react';
 
-import { blogUrl } from '@/utils/constant';
-import { DeleteProps } from '@/utils/hooks/useTableData';
+import type { AdminComment } from '@/utils/api';
+import { blogLink, dateTimeFormat } from '@/utils/constant';
 
 import s from './index.scss';
 
 interface Props {
-  handleDelete: (id: string, props: DeleteProps) => void;
-  deleteProps: DeleteProps;
+  handleDelete: (id: number) => void;
 }
 
-export const useColumns = ({ handleDelete, deleteProps }: Props) => [
+export const useColumns = ({ handleDelete }: Props): TableColumnProps<AdminComment>[] => [
   {
     title: '昵称',
-    dataIndex: 'name',
-    render: (text: string) => (
+    dataIndex: 'nickname',
+    render: (text: string, { isAdmin }: AdminComment) => (
       <div className={s.msgUserNameBox}>
-        <div className={classNames(s.msgUserName, { [s.msgUserAdmin]: text === '飞鸟' })}>
-          {text}
-        </div>
+        <div className={classNames(s.msgUserName, { [s.msgUserAdmin]: isAdmin })}>{text}</div>
       </div>
     )
   },
@@ -31,7 +29,7 @@ export const useColumns = ({ handleDelete, deleteProps }: Props) => [
   },
   {
     title: '网址',
-    dataIndex: 'link',
+    dataIndex: 'website',
     render: (text: string) => (
       <a href={text} target='_blank' rel='noreferrer'>
         {text}
@@ -40,51 +38,49 @@ export const useColumns = ({ handleDelete, deleteProps }: Props) => [
   },
   {
     title: '日期',
-    dataIndex: 'date',
-    render: (text: string) => <>{dayjs(text).format('YYYY-MM-DD HH:mm:ss')}</>
+    dataIndex: 'createdAt',
+    render: (text: string) => <>{dayjs(text).format(dateTimeFormat)}</>
   },
   {
     title: '类型',
-
-    render: (_: any, { postTitle, replyId }: { postTitle: string; replyId: string }) => (
+    render: (_: unknown, { article, parentId }: AdminComment) => (
       <div className={s.typeBox}>
         <div
-          className={postTitle ? s.comment : s.msg}
-          style={replyId ? { marginRight: 5 } : {}}
+          className={article ? s.comment : s.msg}
+          style={parentId ? { marginRight: 5 } : {}}
+          title={article?.title}
         >
-          {postTitle ? '文章评论' : '留言板'}
+          {article ? '文章评论' : '留言板'}
         </div>
-        {replyId && <div className={s.reply}>回复</div>}
+        {parentId && <div className={s.reply}>回复</div>}
       </div>
     )
   },
   {
     title: '内容',
     dataIndex: 'content',
-
     width: 400,
     render: (text: string) => <div className={s.msgsContent}>{text}</div>
   },
   {
+    title: 'IP',
+    dataIndex: 'ip'
+  },
+  {
     title: '操作',
-    render: (_: any, { postTitle, _id }: { postTitle: string; _id: string }) => (
+    render: (_: unknown, { article, id }: AdminComment) => (
       <>
         <Button
           style={{ marginRight: 10 }}
           type='primary'
-          onClick={() => {
-            const url = postTitle
-              ? `${blogUrl}/post?title=${postTitle}`
-              : `${blogUrl}/msg`;
-            window.open(url);
-          }}
+          onClick={() => window.open(blogLink(article ? `/post/${article.id}` : '/msg'))}
         >
           查看
         </Button>
         <Popconfirm
           position='br'
-          title='确定要删除该留言吗？'
-          onOk={() => handleDelete(_id, deleteProps)}
+          title='确定要删除该留言吗？其下回复会一并删除。'
+          onOk={() => handleDelete(id)}
           okText='Yes'
           cancelText='No'
         >

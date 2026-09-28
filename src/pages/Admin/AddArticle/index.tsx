@@ -1,243 +1,92 @@
 import { Button, Input, Message, Select } from '@arco-design/web-react';
-import { useMount, useRequest, useTitle } from 'ahooks';
+import { useRequest, useTitle } from 'ahooks';
 import classNames from 'classnames';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import MarkDown from '@/components/MarkDown';
-import { selectClass, selectTag } from '@/redux/selectors';
-import { resetClasses, setClasses } from '@/redux/slices/classes';
-import { setTags } from '@/redux/slices/tags';
-import { addDataAPI } from '@/utils/apis/addData';
-import { getDataAPI } from '@/utils/apis/getData';
-import { getDataByIdAPI } from '@/utils/apis/getDataById';
-import { getWhereDataAPI } from '@/utils/apis/getWhereData';
-import { updateDataAPI } from '@/utils/apis/updateData';
-import { _, isAdmin } from '@/utils/cloudBase';
-import { failText, siteTitle, visitorText } from '@/utils/constant';
-import { DB } from '@/utils/dbConfig';
-import {
-  classCountChange,
-  containsChineseCharacters,
-  isValidDateString
-} from '@/utils/functions';
+import UploadButton from '@/components/UploadButton';
+import type { ArticleStatus } from '@/utils/api';
+import { articleApi, categoryApi, tagApi } from '@/utils/api';
+import { dateTimeFormat, siteTitle } from '@/utils/constant';
+import { mutate, parseLocalTime } from '@/utils/feedback';
 import { useScrollSync } from '@/utils/hooks/useScrollSync';
 
 import { Title } from '../titleConfig';
 import s from './index.scss';
 
 const AddArticle: React.FC = () => {
-  useTitle(`${siteTitle} | ${Title.AddArticle}`);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const id = Number(searchParams.get('id')) || 0;
+
+  useTitle(`${siteTitle} | ${id ? Title.EditArticle : Title.AddArticle}`);
 
   const { leftRef, rightRef, handleScrollRun } = useScrollSync();
 
   const [title, setTitle] = useState('');
-  const [titleEng, setTitleEng] = useState('');
-  const [classText, setClassText] = useState('');
-  const [tags, setLocalTags] = useState<string[]>([]);
-  const [date, setDate] = useState(dayjs().format('YYYY-MM-DD HH:mm:ss'));
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [tagIds, setTagIds] = useState<number[]>([]);
+  const [date, setDate] = useState(dayjs().format(dateTimeFormat));
   const [content, setContent] = useState('');
+  const [status, setStatus] = useState<ArticleStatus>('draft');
+  const [saving, setSaving] = useState(false);
 
-  // 文章/草稿 更新逻辑
-  const id = searchParams.get('id');
-  const from = searchParams.get('from');
-
-  const [defaultClassText, setDefaultClassText] = useState('');
-
-  useRequest(() => getDataByIdAPI(DB.Article, id || ''), {
-    retryCount: 3,
-    onSuccess: res => {
-      if (!res.data.length) return;
-      const { title, titleEng, classes: classText, tags, date, content } = res.data[0];
-      setTitle(title);
-      setTitleEng(titleEng);
-      setClassText(classText);
-      setLocalTags(tags);
-      setDate(dayjs(date).format('YYYY-MM-DD HH:mm:ss'));
-      setContent(content);
-      setDefaultClassText(classText);
+  useRequest(() => articleApi.get(id), {
+    ready: !!id,
+    onSuccess: article => {
+      setTitle(article.title);
+      setCategoryId(article.category?.id);
+      setTagIds(article.tags.map(t => t.id));
+      setDate(dayjs(article.publishedAt).format(dateTimeFormat));
+      setContent(article.content ?? '');
+      setStatus(article.status);
     }
   });
 
-  const reduxClasses = useSelector(selectClass);
-  const reduxTags = useSelector(selectTag);
+  const { data: categories, loading: classLoading } = useRequest(categoryApi.list);
+  const { data: tags = [], loading: tagLoading } = useRequest(tagApi.list);
 
-  const dispatch = useDispatch();
-
-  const { loading: classLoading, run: classesRun } = useRequest(
-    () => getDataAPI(DB.Class),
-    {
-      retryCount: 3,
-      manual: true,
-      onSuccess: res => {
-        dispatch(setClasses(res.data));
-      }
-    }
-  );
-
-  const { loading: tagLoading, run: tagsRun } = useRequest(() => getDataAPI(DB.Tag), {
-    retryCount: 3,
-    manual: true,
-    onSuccess: res => {
-      dispatch(setTags(res.data));
-    }
-  });
-
-  useMount(() => {
-    if (!reduxClasses.isDone) {
-      classesRun();
-    }
-    if (!reduxTags.isDone) {
-      tagsRun();
-    }
-  });
-
-  const addData = (type: 'post' | 'draft', data: object) => {
-    addDataAPI(DB.Article, data).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success(type === 'post' ? '发布文章成功！' : '保存草稿成功！');
-        navigate(
-          `${
-            type === 'post' ? '/admin/article' : '/admin/draft'
-          }?page=1&updated=1&clearOther=1`
-        );
-      } else {
-        Message.warning(failText);
-      }
-    });
+  const insertAtCursor = (text: string) => {
+    const el = leftRef.current;
+    const start = el?.selectionStart ?? content.length;
+    const end = el?.selectionEnd ?? content.length;
+    setContent(content.slice(0, start) + text + content.slice(end));
   };
 
-  const updateData = (type: 'post' | 'draft', id: string, data: object) => {
-    updateDataAPI(DB.Article, id, data).then(res => {
-      if (!res.success && !res.permission) {
-        Message.warning(visitorText);
-      } else if (res.success && res.permission) {
-        Message.success(type === 'post' ? '更新文章成功！' : '保存草稿成功！');
-        navigate(
-          `${
-            type === 'post' ? '/admin/article' : '/admin/draft'
-          }?page=1&updated=1&clearOther=1`
-        );
-      } else {
-        Message.warning(failText);
-      }
-    });
-  };
-
-  const isArticleUnique = async () => {
-    const res = await getWhereDataAPI(DB.Article, {
-      titleEng: _.eq(titleEng)
-    });
-    const sameEngInArticles = res.data.filter(({ _id }: { _id: string }) => _id !== id);
-    return !sameEngInArticles.length;
-  };
-
-  // 新建页面：
-  //   发布：
-  //     选择了分类：classCount++
-  //     未选择分类：
-  //   存草稿：
-
-  // 编辑页面：
-  //   文章页进来：
-  //     发布：
-  //       修改了分类：
-  //         新的不为空：old--，new++
-  //         新的为空：old--
-  //       未修改分类：
-  //     存草稿：非空old--
-  //   草稿页进来：
-  //     发布：
-  //       选择了分类：classCount++
-  //       未选择分类：
-  //     存草稿：
-
-  const postArticle = async (type: 'post' | 'draft') => {
-    if (!title || !titleEng || !date || !content) {
-      Message.info('请至少输入中英文标题、时间、正文！');
+  const postArticle = async (next: ArticleStatus) => {
+    if (!title.trim() || !date.trim()) {
+      Message.info('请至少输入标题、时间！');
       return;
     }
-    if (containsChineseCharacters(titleEng)) {
-      Message.info('英文标题不能含有中文字符！');
+    if (next === 'published' && !content.trim()) {
+      Message.info('发布前请填写正文！');
       return;
     }
-    if (!isValidDateString(date, true)) {
+    const publishedAt = parseLocalTime(date, dateTimeFormat);
+    if (!publishedAt) {
       Message.info('日期字符串不合法！');
       return;
     }
-    if (!isAdmin()) {
-      Message.warning(visitorText);
-      return;
-    }
 
-    const data = {
-      title,
-      titleEng,
+    const input = {
+      title: title.trim(),
       content,
-      tags,
-      classes: classText,
-      date: new Date(date).getTime(),
-      url: `https://lzxjack.top/post?title=${titleEng}`,
-      post: type === 'post'
+      categoryId: categoryId ?? null,
+      tagIds,
+      status: next,
+      publishedAt
     };
+    const successText = next === 'published' ? `${id ? '更新' : '发布'}文章成功！` : '保存草稿成功！';
 
-    if (!(await isArticleUnique())) {
-      Message.warning('英文标题已存在！');
-      return;
-    }
-
-    if (!id) {
-      // 新建页面
-      addData(type, data);
-      if (type === 'post') {
-        // 发布
-        classCountChange(classText, 'add', () => {
-          dispatch(resetClasses());
-        });
-      } else {
-        dispatch(resetClasses());
-      }
-    } else {
-      // 编辑页面
-      updateData(type, id, data);
-      if (from === 'article') {
-        // 文章页进来
-        if (type === 'post') {
-          // 发布
-          if (classText !== defaultClassText) {
-            classCountChange(classText, 'add', () => {
-              dispatch(resetClasses());
-            });
-            classCountChange(defaultClassText, 'min', () => {
-              dispatch(resetClasses());
-            });
-          } else {
-            dispatch(resetClasses());
-          }
-        } else {
-          // 存草稿
-          classCountChange(defaultClassText, 'min', () => {
-            dispatch(resetClasses());
-          });
-        }
-      } else {
-        // 草稿页进来
-        if (type === 'post') {
-          // 发布
-          classCountChange(classText, 'add', () => {
-            dispatch(resetClasses());
-          });
-        } else {
-          dispatch(resetClasses());
-        }
-      }
-    }
+    setSaving(true);
+    const ok = await mutate(
+      () => (id ? articleApi.update(id, input) : articleApi.create(input)),
+      successText
+    );
+    setSaving(false);
+    if (ok) navigate(next === 'published' ? '/article' : '/draft');
   };
 
   return (
@@ -246,25 +95,17 @@ const AddArticle: React.FC = () => {
         <div className={s.top}>
           <Input
             className={s.chineseTitle}
-            style={{ width: 600 }}
-            addBefore='中文标题'
+            addBefore='标题'
             allowClear
             size='large'
             value={title}
             onChange={value => setTitle(value)}
           />
-          <Input
-            style={{ width: 400, marginRight: 10 }}
-            addBefore='英文标题'
-            allowClear
-            size='large'
-            value={titleEng}
-            onChange={value => setTitleEng(value)}
-          />
           <Button
             size='large'
             type='primary'
             style={{ marginRight: 10 }}
+            loading={saving}
             onClick={() => postArticle('draft')}
           >
             存为草稿
@@ -273,9 +114,10 @@ const AddArticle: React.FC = () => {
             size='large'
             type='primary'
             status='success'
-            onClick={() => postArticle('post')}
+            loading={saving}
+            onClick={() => postArticle('published')}
           >
-            {id ? '更新' : '发布'}文章
+            {id && status === 'published' ? '更新' : '发布'}文章
           </Button>
         </div>
         <div className={s.bottom}>
@@ -283,19 +125,15 @@ const AddArticle: React.FC = () => {
             addBefore='分类'
             size='large'
             className={s.classText}
-            allowCreate={false}
             showSearch
             allowClear
-            unmountOnExit={false}
-            value={classText}
-            onChange={value => setClassText(value)}
+            value={categoryId}
+            onChange={value => setCategoryId(value)}
             disabled={classLoading}
-            options={reduxClasses.value.map(
-              ({ class: classText }: { class: string }) => ({
-                value: classText,
-                label: classText
-              })
-            )}
+            options={(categories?.items ?? []).map(({ id, name }) => ({
+              value: id,
+              label: name
+            }))}
           />
           <Select
             addBefore='标签'
@@ -303,26 +141,26 @@ const AddArticle: React.FC = () => {
             className={s.tags}
             maxTagCount={6}
             mode='multiple'
-            allowCreate={false}
             showSearch
             allowClear
-            unmountOnExit={false}
-            value={tags}
-            onChange={value => setLocalTags(value)}
+            value={tagIds}
+            onChange={value => setTagIds(value)}
             disabled={tagLoading}
-            options={reduxTags.value.map(({ tag }: { tag: string }) => ({
-              value: tag,
-              label: tag
-            }))}
+            options={tags.map(({ id, name }) => ({ value: id, label: name }))}
           />
           <Input
             addBefore='时间'
             value={date}
-            placeholder='YYYY-MM-DD HH:mm:ss'
+            placeholder={dateTimeFormat}
             onChange={value => setDate(value)}
             className={s.time}
             allowClear
             size='large'
+            style={{ marginRight: 10 }}
+          />
+          <UploadButton
+            size='large'
+            onUploaded={(url, file) => insertAtCursor(`![${file.name}](${url})`)}
           />
         </div>
       </div>

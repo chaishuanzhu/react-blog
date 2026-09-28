@@ -1,7 +1,7 @@
 import './global.custom.scss';
 
 import React, { lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router';
 
 import RequireAuth from '@/components/RequireAuth';
 
@@ -19,22 +19,21 @@ const App: React.FC = () => {
     <WithLoading>
       <Routes>
         <Route
-          path='/'
+          path='/login'
           element={
-            <RequireAuth requireLogin={false} to='/admin/home'>
+            <RequireAuth requireLogin={false} to='/home'>
               <Login />
             </RequireAuth>
           }
         />
         <Route
-          path='admin/*'
+          path='/*'
           element={
-            <RequireAuth requireLogin={true} to='/'>
+            <RequireAuth requireLogin={true} to='/login'>
               <Admin />
             </RequireAuth>
           }
         />
-        <Route path='*' element={<Navigate to='/' />} />
       </Routes>
     </WithLoading>
   );
