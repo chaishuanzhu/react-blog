@@ -436,49 +436,6 @@ func (s *Admin) DeleteChangelog(ctx context.Context, id uint64) error {
 	return deleted(s.q.DeleteChangelog(ctx, id))
 }
 
-// ---- projects ----
-
-func validateProject(in model.ProjectInput) (store.CreateProjectParams, error) {
-	var p store.CreateProjectParams
-	var err error
-	if p.Name, err = requiredText("name", in.Name, 64); err != nil {
-		return p, err
-	}
-	if p.Description, err = optionalText("description", in.Description, 255); err != nil {
-		return p, err
-	}
-	if p.Cover, err = optionalURL("cover", in.Cover); err != nil {
-		return p, err
-	}
-	if p.Url, err = optionalURL("url", in.URL); err != nil {
-		return p, err
-	}
-	p.SortOrder = in.SortOrder
-	return p, nil
-}
-
-func (s *Admin) CreateProject(ctx context.Context, in model.ProjectInput) (uint64, error) {
-	p, err := validateProject(in)
-	if err != nil {
-		return 0, err
-	}
-	return created(s.q.CreateProject(ctx, p))
-}
-
-func (s *Admin) UpdateProject(ctx context.Context, id uint64, in model.ProjectInput) error {
-	p, err := validateProject(in)
-	if err != nil {
-		return err
-	}
-	return updated(s.q.UpdateProject(ctx, store.UpdateProjectParams{
-		Name: p.Name, Description: p.Description, Cover: p.Cover, Url: p.Url, SortOrder: p.SortOrder, ID: id,
-	}))
-}
-
-func (s *Admin) DeleteProject(ctx context.Context, id uint64) error {
-	return deleted(s.q.DeleteProject(ctx, id))
-}
-
 // ---- pages, notice, stats ----
 
 func (s *Admin) UpdatePage(ctx context.Context, key string, in model.ContentInput) error {
@@ -508,7 +465,7 @@ func (s *Admin) Stats(ctx context.Context) (*model.AdminStats, error) {
 	return &model.AdminStats{
 		PublishedCount: r.PublishedCount, DraftCount: r.DraftCount, CategoryCount: r.CategoryCount,
 		TagCount: r.TagCount, CommentCount: r.CommentCount, MomentCount: r.MomentCount,
-		FriendLinkCount: r.FriendLinkCount, ProjectCount: r.ProjectCount, ViewCount: r.ViewCount,
+		FriendLinkCount: r.FriendLinkCount, ViewCount: r.ViewCount,
 	}, nil
 }
 

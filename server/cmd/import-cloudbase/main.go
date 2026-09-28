@@ -21,7 +21,7 @@ import (
 
 var contentTables = []string{
 	"comments", "article_tags", "articles", "categories", "tags",
-	"moments", "friend_links", "changelogs", "projects",
+	"moments", "friend_links", "changelogs",
 }
 
 func main() {

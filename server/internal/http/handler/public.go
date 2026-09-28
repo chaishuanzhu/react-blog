@@ -103,15 +103,6 @@ func (h *Public) ListChangelogs(c *gin.Context) {
 	response.OK(c, gin.H{"items": items})
 }
 
-func (h *Public) ListProjects(c *gin.Context) {
-	items, err := h.Svc.ListProjects(c.Request.Context())
-	if err != nil {
-		response.Fail(c, err)
-		return
-	}
-	response.OK(c, gin.H{"items": items})
-}
-
 func (h *Public) GetPage(c *gin.Context) {
 	page, err := h.Svc.GetPage(c.Request.Context(), c.Param("key"))
 	if err != nil {

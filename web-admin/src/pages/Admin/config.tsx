@@ -7,8 +7,7 @@ import {
   BiMessageRoundedDots,
   BiNews,
   BiShareAlt,
-  BiTaskX,
-  BiTrophy
+  BiTaskX
 } from 'react-icons/bi';
 
 const Home = lazy(
@@ -26,9 +25,6 @@ const Msg = lazy(
 );
 const Link = lazy(
   () => import(/* webpackChunkName:'Link', webpackPrefetch:true */ '@/pages/Admin/Link')
-);
-const Show = lazy(
-  () => import(/* webpackChunkName:'Show', webpackPrefetch:true */ '@/pages/Admin/Show')
 );
 const About = lazy(
   () => import(/* webpackChunkName:'About', webpackPrefetch:true */ '@/pages/Admin/About')
@@ -89,12 +85,6 @@ export const useRoutes = (): RouteType[] => [
     disPlayName: '友链',
     element: <Link />,
     icon: <BiShareAlt />
-  },
-  {
-    path: 'show',
-    disPlayName: '作品',
-    element: <Show />,
-    icon: <BiTrophy />
   },
   {
     path: 'log',

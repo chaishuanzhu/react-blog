@@ -5,7 +5,6 @@ export enum Title {
   Say = '自言自语',
   Msg = '留言板',
   Link = '友情链接',
-  Show = '小作品',
   Log = '建站日志',
   About = '关于'
 }

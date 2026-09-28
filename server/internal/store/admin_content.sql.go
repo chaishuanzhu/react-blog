@@ -98,7 +98,6 @@ SELECT
   (SELECT COUNT(*) FROM comments) AS comment_count,
   (SELECT COUNT(*) FROM moments) AS moment_count,
   (SELECT COUNT(*) FROM friend_links) AS friend_link_count,
-  (SELECT COUNT(*) FROM projects) AS project_count,
   (SELECT view_count FROM site_settings WHERE id = 1) AS view_count
 `
 
@@ -110,7 +109,6 @@ type AdminStatsRow struct {
 	CommentCount    int64
 	MomentCount     int64
 	FriendLinkCount int64
-	ProjectCount    int64
 	ViewCount       uint64
 }
 
@@ -125,7 +123,6 @@ func (q *Queries) AdminStats(ctx context.Context) (AdminStatsRow, error) {
 		&i.CommentCount,
 		&i.MomentCount,
 		&i.FriendLinkCount,
-		&i.ProjectCount,
 		&i.ViewCount,
 	)
 	return i, err
@@ -184,28 +181,6 @@ type CreateMomentParams struct {
 
 func (q *Queries) CreateMoment(ctx context.Context, arg CreateMomentParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, createMoment, arg.Content, arg.Images, arg.CreatedAt)
-}
-
-const createProject = `-- name: CreateProject :execresult
-INSERT INTO projects (name, description, cover, url, sort_order) VALUES (?, ?, ?, ?, ?)
-`
-
-type CreateProjectParams struct {
-	Name        string
-	Description string
-	Cover       string
-	Url         string
-	SortOrder   int32
-}
-
-func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createProject,
-		arg.Name,
-		arg.Description,
-		arg.Cover,
-		arg.Url,
-		arg.SortOrder,
-	)
 }
 
 const createTag = `-- name: CreateTag :execresult
@@ -270,18 +245,6 @@ DELETE FROM moments WHERE id = ?
 
 func (q *Queries) DeleteMoment(ctx context.Context, id uint64) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteMoment, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
-const deleteProject = `-- name: DeleteProject :execrows
-DELETE FROM projects WHERE id = ?
-`
-
-func (q *Queries) DeleteProject(ctx context.Context, id uint64) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteProject, id)
 	if err != nil {
 		return 0, err
 	}
@@ -413,34 +376,6 @@ type UpdatePageParams struct {
 
 func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updatePage, arg.Content, arg.PageKey)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
-const updateProject = `-- name: UpdateProject :execrows
-UPDATE projects SET name = ?, description = ?, cover = ?, url = ?, sort_order = ? WHERE id = ?
-`
-
-type UpdateProjectParams struct {
-	Name        string
-	Description string
-	Cover       string
-	Url         string
-	SortOrder   int32
-	ID          uint64
-}
-
-func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateProject,
-		arg.Name,
-		arg.Description,
-		arg.Cover,
-		arg.Url,
-		arg.SortOrder,
-		arg.ID,
-	)
 	if err != nil {
 		return 0, err
 	}

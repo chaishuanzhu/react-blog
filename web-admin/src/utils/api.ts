@@ -149,17 +149,6 @@ export interface Changelog {
 
 export type ChangelogInput = Omit<Changelog, 'id'>;
 
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-  cover: string;
-  url: string;
-  sortOrder: number;
-}
-
-export type ProjectInput = Omit<Project, 'id'>;
-
 export type PageKey = 'about-site' | 'about-me';
 
 export interface Stats {
@@ -170,7 +159,6 @@ export interface Stats {
   commentCount: number;
   momentCount: number;
   friendLinkCount: number;
-  projectCount: number;
   viewCount: number;
 }
 
@@ -259,11 +247,6 @@ export const friendLinkApi = {
 export const changelogApi = {
   ...resource<ChangelogInput>('/admin/changelogs'),
   list: () => get<{ items: Changelog[] }>('/admin/changelogs').then(res => res.items)
-};
-
-export const projectApi = {
-  ...resource<ProjectInput>('/admin/projects'),
-  list: () => get<{ items: Project[] }>('/admin/projects').then(res => res.items)
 };
 
 export const pageApi = {

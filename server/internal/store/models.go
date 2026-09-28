@@ -203,16 +203,6 @@ type Page struct {
 	UpdatedAt time.Time
 }
 
-type Project struct {
-	ID          uint64
-	Name        string
-	Description string
-	Cover       string
-	Url         string
-	SortOrder   int32
-	CreatedAt   time.Time
-}
-
 type SiteSetting struct {
 	ID        uint8
 	Notice    string

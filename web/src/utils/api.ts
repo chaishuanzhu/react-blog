@@ -104,14 +104,6 @@ export interface Changelog {
   loggedAt: string;
 }
 
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-  cover: string;
-  url: string;
-}
-
 export interface SitePage {
   key: string;
   content: string;
@@ -185,9 +177,6 @@ export const getFriendLinks = () =>
 
 export const getChangelogs = () =>
   get<{ items: Changelog[] }>('/changelogs').then(res => res.items);
-
-export const getProjects = () =>
-  get<{ items: Project[] }>('/projects').then(res => res.items);
 
 export const getPage = (key: 'about-site' | 'about-me') => get<SitePage>(`/pages/${key}`);
 

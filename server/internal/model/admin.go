@@ -96,14 +96,6 @@ type ChangelogInput struct {
 	LoggedAt *time.Time `json:"loggedAt"`
 }
 
-type ProjectInput struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Cover       string `json:"cover"`
-	URL         string `json:"url"`
-	SortOrder   int32  `json:"sortOrder"`
-}
-
 type ContentInput struct {
 	Content string `json:"content"`
 }
@@ -120,7 +112,6 @@ type AdminStats struct {
 	CommentCount    int64  `json:"commentCount"`
 	MomentCount     int64  `json:"momentCount"`
 	FriendLinkCount int64  `json:"friendLinkCount"`
-	ProjectCount    int64  `json:"projectCount"`
 	ViewCount       uint64 `json:"viewCount"`
 }
 

@@ -28,7 +28,6 @@ type Querier interface {
 	CreateComment(ctx context.Context, arg CreateCommentParams) (sql.Result, error)
 	CreateFriendLink(ctx context.Context, arg CreateFriendLinkParams) (sql.Result, error)
 	CreateMoment(ctx context.Context, arg CreateMomentParams) (sql.Result, error)
-	CreateProject(ctx context.Context, arg CreateProjectParams) (sql.Result, error)
 	CreateTag(ctx context.Context, name string) (sql.Result, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (sql.Result, error)
 	DeleteArticle(ctx context.Context, id uint64) (int64, error)
@@ -38,7 +37,6 @@ type Querier interface {
 	DeleteComment(ctx context.Context, id uint64) (int64, error)
 	DeleteFriendLink(ctx context.Context, id uint64) (int64, error)
 	DeleteMoment(ctx context.Context, id uint64) (int64, error)
-	DeleteProject(ctx context.Context, id uint64) (int64, error)
 	DeleteTag(ctx context.Context, id uint64) (int64, error)
 	GetArticleRef(ctx context.Context, id uint64) (GetArticleRefRow, error)
 	GetComment(ctx context.Context, id uint64) (GetCommentRow, error)
@@ -56,7 +54,6 @@ type Querier interface {
 	ListChangelogs(ctx context.Context) ([]ListChangelogsRow, error)
 	ListFriendLinks(ctx context.Context) ([]FriendLink, error)
 	ListMoments(ctx context.Context, arg ListMomentsParams) ([]Moment, error)
-	ListProjects(ctx context.Context) ([]ListProjectsRow, error)
 	ListPublishedArticles(ctx context.Context, arg ListPublishedArticlesParams) ([]ListPublishedArticlesRow, error)
 	ListRepliesForParents(ctx context.Context, parentIds []sql.NullInt64) ([]ListRepliesForParentsRow, error)
 	ListTagsForArticles(ctx context.Context, articleIds []uint64) ([]ListTagsForArticlesRow, error)
@@ -70,7 +67,6 @@ type Querier interface {
 	UpdateMoment(ctx context.Context, arg UpdateMomentParams) (int64, error)
 	UpdateNotice(ctx context.Context, notice string) error
 	UpdatePage(ctx context.Context, arg UpdatePageParams) (int64, error)
-	UpdateProject(ctx context.Context, arg UpdateProjectParams) (int64, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (int64, error)
 }

@@ -14,9 +14,5 @@ ORDER BY created_at DESC, id DESC;
 SELECT id, items, logged_at FROM changelogs
 ORDER BY logged_at DESC, id DESC;
 
--- name: ListProjects :many
-SELECT id, name, description, cover, url, sort_order FROM projects
-ORDER BY sort_order ASC, id ASC;
-
 -- name: GetPage :one
 SELECT page_key, content, updated_at FROM pages WHERE page_key = ?;

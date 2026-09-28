@@ -68,15 +68,6 @@ type Changelog struct {
 	LoggedAt time.Time `json:"loggedAt"`
 }
 
-type Project struct {
-	ID          uint64 `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Cover       string `json:"cover"`
-	URL         string `json:"url"`
-	SortOrder   int32  `json:"sortOrder"`
-}
-
 type Page struct {
 	Key       string    `json:"key"`
 	Content   string    `json:"content"`

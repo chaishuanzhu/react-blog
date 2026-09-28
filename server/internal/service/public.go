@@ -184,21 +184,6 @@ func (s *Public) ListChangelogs(ctx context.Context) ([]model.Changelog, error) 
 	return items, nil
 }
 
-func (s *Public) ListProjects(ctx context.Context) ([]model.Project, error) {
-	rows, err := s.q.ListProjects(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list projects: %w", err)
-	}
-	items := make([]model.Project, len(rows))
-	for i, r := range rows {
-		items[i] = model.Project{
-			ID: r.ID, Name: r.Name, Description: r.Description,
-			Cover: r.Cover, URL: r.Url, SortOrder: r.SortOrder,
-		}
-	}
-	return items, nil
-}
-
 func (s *Public) GetPage(ctx context.Context, key string) (*model.Page, error) {
 	dbKey, ok := pageKeys[key]
 	if !ok {

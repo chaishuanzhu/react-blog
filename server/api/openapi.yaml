@@ -142,17 +142,6 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ChangelogList" }
-  /api/v1/projects:
-    get:
-      tags: [前台]
-      summary: 作品列表
-      security: []
-      responses:
-        "200":
-          description: 作品
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProjectList" }
   /api/v1/pages/{key}:
     get:
       tags: [前台]
@@ -616,45 +605,6 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /api/v1/admin/projects:
-    get:
-      tags: [后台]
-      summary: 作品列表
-      responses:
-        "200":
-          description: 作品
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ProjectList" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-    post:
-      tags: [后台]
-      summary: 新增作品
-      requestBody: { $ref: "#/components/requestBodies/ProjectInput" }
-      responses:
-        "201": { $ref: "#/components/responses/Created" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-  /api/v1/admin/projects/{id}:
-    parameters:
-      - $ref: "#/components/parameters/ID"
-    put:
-      tags: [后台]
-      summary: 修改作品
-      requestBody: { $ref: "#/components/requestBodies/ProjectInput" }
-      responses:
-        "204": { $ref: "#/components/responses/NoContent" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-    delete:
-      tags: [后台]
-      summary: 删除作品
-      responses:
-        "204": { $ref: "#/components/responses/NoContent" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
   /api/v1/admin/pages/{key}:
     put:
       tags: [后台]
@@ -785,11 +735,6 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ChangelogInput" }
-    ProjectInput:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/ProjectInput" }
 
   responses:
     Created:
@@ -1067,33 +1012,6 @@ components:
           items: { type: string, maxLength: 500 }
         loggedAt: { type: [string, "null"], format: date-time, description: 不传则为当前时间 }
 
-    Project:
-      type: object
-      required: [id, name, description, cover, url, sortOrder]
-      properties:
-        id: { type: integer, format: int64 }
-        name: { type: string }
-        description: { type: string }
-        cover: { type: string, format: uri }
-        url: { type: string, format: uri }
-        sortOrder: { type: integer, format: int32 }
-    ProjectList:
-      type: object
-      required: [items]
-      properties:
-        items:
-          type: array
-          items: { $ref: "#/components/schemas/Project" }
-    ProjectInput:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string, maxLength: 64 }
-        description: { type: string }
-        cover: { type: string, format: uri }
-        url: { type: string, format: uri }
-        sortOrder: { type: integer, format: int32, description: 越小越靠前 }
-
     Page:
       type: object
       required: [key, content, updatedAt]
@@ -1214,7 +1132,7 @@ components:
         website: { type: string, description: 可选，http(s) 链接 }
     AdminStats:
       type: object
-      required: [publishedCount, draftCount, categoryCount, tagCount, commentCount, momentCount, friendLinkCount, projectCount, viewCount]
+      required: [publishedCount, draftCount, categoryCount, tagCount, commentCount, momentCount, friendLinkCount, viewCount]
       properties:
         publishedCount: { type: integer, format: int64 }
         draftCount: { type: integer, format: int64 }
@@ -1223,7 +1141,6 @@ components:
         commentCount: { type: integer, format: int64 }
         momentCount: { type: integer, format: int64 }
         friendLinkCount: { type: integer, format: int64 }
-        projectCount: { type: integer, format: int64 }
         viewCount: { type: integer, format: int64 }
     UploadTicket:
       type: object

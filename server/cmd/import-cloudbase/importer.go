@@ -41,7 +41,6 @@ func (im *importer) run(ctx context.Context, e *export) error {
 		{"moments", im.importMoments},
 		{"friend_links", im.importLinks},
 		{"changelogs", im.importLogs},
-		{"projects", im.importProjects},
 		{"pages", im.importPages},
 		{"site_settings", im.importSiteSettings},
 	}
@@ -294,18 +293,6 @@ func (im *importer) importLogs(ctx context.Context, e *export) error {
 		raw, _ := json.Marshal(items)
 		if _, err := im.insert(ctx, "changelogs",
 			"INSERT INTO changelogs (items, logged_at) VALUES (?, ?)", raw, l.Date.Or(time.Now())); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (im *importer) importProjects(ctx context.Context, e *export) error {
-	for _, s := range e.Shows {
-		order, _ := s.Order.Int64()
-		if _, err := im.insert(ctx, "projects",
-			"INSERT INTO projects (name, description, cover, url, sort_order) VALUES (?, ?, ?, ?, ?)",
-			s.Name, truncateRunes(s.Descr, 255), s.Cover, s.Link, order); err != nil {
 			return err
 		}
 	}

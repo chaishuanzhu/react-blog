@@ -90,7 +90,6 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *sql.DB, notifier mai
 	api.GET("/moments", pub.ListMoments)
 	api.GET("/friend-links", pub.ListFriendLinks)
 	api.GET("/changelogs", pub.ListChangelogs)
-	api.GET("/projects", pub.ListProjects)
 	api.GET("/pages/:key", pub.GetPage)
 	api.GET("/site", pub.GetSite)
 	api.POST("/site/views", pub.RecordView)
@@ -139,11 +138,6 @@ func NewRouter(ctx context.Context, cfg *config.Config, db *sql.DB, notifier mai
 	adm.POST("/changelogs", handler.CreateHandler(adminSvc.CreateChangelog))
 	adm.PUT("/changelogs/:id", handler.UpdateHandler(adminSvc.UpdateChangelog))
 	adm.DELETE("/changelogs/:id", handler.DeleteHandler(adminSvc.DeleteChangelog))
-
-	adm.GET("/projects", pub.ListProjects)
-	adm.POST("/projects", handler.CreateHandler(adminSvc.CreateProject))
-	adm.PUT("/projects/:id", handler.UpdateHandler(adminSvc.UpdateProject))
-	adm.DELETE("/projects/:id", handler.DeleteHandler(adminSvc.DeleteProject))
 
 	adm.PUT("/pages/:key", admin.UpdatePage)
 	adm.PUT("/site/notice", admin.UpdateNotice)

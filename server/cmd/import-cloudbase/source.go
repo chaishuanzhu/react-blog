@@ -124,15 +124,6 @@ type cbLog struct {
 	LogContent []string `json:"logContent"`
 }
 
-type cbShow struct {
-	ID    string      `json:"_id"`
-	Order json.Number `json:"order"`
-	Name  string      `json:"name"`
-	Descr string      `json:"descr"`
-	Cover string      `json:"cover"`
-	Link  string      `json:"link"`
-}
-
 type cbAbout struct {
 	ID      string `json:"_id"`
 	Content string `json:"content"`
@@ -156,7 +147,6 @@ type export struct {
 	Says       []cbSay
 	Links      []cbLink
 	Logs       []cbLog
-	Shows      []cbShow
 	About      []cbAbout
 	Notice     []cbNotice
 	SiteCount  []cbSiteCount
@@ -175,7 +165,6 @@ func loadExport(dir string) (*export, error) {
 		{"says", func(p string) error { return readDocuments(p, &e.Says) }},
 		{"links", func(p string) error { return readDocuments(p, &e.Links) }},
 		{"logs", func(p string) error { return readDocuments(p, &e.Logs) }},
-		{"shows", func(p string) error { return readDocuments(p, &e.Shows) }},
 		{"about", func(p string) error { return readDocuments(p, &e.About) }},
 		{"notice", func(p string) error { return readDocuments(p, &e.Notice) }},
 		{"siteCount", func(p string) error { return readDocuments(p, &e.SiteCount) }},

@@ -58,15 +58,6 @@ UPDATE changelogs SET items = ?, logged_at = ? WHERE id = ?;
 -- name: DeleteChangelog :execrows
 DELETE FROM changelogs WHERE id = ?;
 
--- name: CreateProject :execresult
-INSERT INTO projects (name, description, cover, url, sort_order) VALUES (?, ?, ?, ?, ?);
-
--- name: UpdateProject :execrows
-UPDATE projects SET name = ?, description = ?, cover = ?, url = ?, sort_order = ? WHERE id = ?;
-
--- name: DeleteProject :execrows
-DELETE FROM projects WHERE id = ?;
-
 -- name: UpdatePage :execrows
 UPDATE pages SET content = ? WHERE page_key = ?;
 
@@ -79,5 +70,4 @@ SELECT
   (SELECT COUNT(*) FROM comments) AS comment_count,
   (SELECT COUNT(*) FROM moments) AS moment_count,
   (SELECT COUNT(*) FROM friend_links) AS friend_link_count,
-  (SELECT COUNT(*) FROM projects) AS project_count,
   (SELECT view_count FROM site_settings WHERE id = 1) AS view_count;
