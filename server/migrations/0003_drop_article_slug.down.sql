@@ -1,0 +1,3 @@
+ALTER TABLE articles ADD COLUMN slug VARCHAR(200) NOT NULL DEFAULT '' AFTER title;
+UPDATE articles SET slug = CAST(id AS CHAR);
+ALTER TABLE articles ALTER COLUMN slug DROP DEFAULT, ADD UNIQUE KEY uk_articles_slug (slug);

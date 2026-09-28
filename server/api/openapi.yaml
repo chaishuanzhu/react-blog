@@ -1,0 +1,1244 @@
+openapi: 3.1.0
+info:
+  title: Blog API
+  version: 1.0.0
+  description: |
+    博客前台（web）与后台（web-admin）共用的接口。
+
+    - 所有时间均为 UTC，RFC 3339 格式。
+    - 错误统一返回 `{"error": {"code": "...", "message": "..."}}`。
+    - 后台接口需要 `Authorization: Bearer <token>`，token 由 `POST /api/v1/auth/login` 获取。
+      修改密码后，之前签发的 token 全部失效。
+    - 请求体默认上限 1MB，文章和页面内容接口为 5MB，超出返回 413。
+servers:
+  - url: /
+tags:
+  - name: 健康检查
+  - name: 前台
+    description: 公开接口，无需登录
+  - name: 评论
+  - name: 账号
+  - name: 后台
+    description: 需要管理员 token
+
+paths:
+  /healthz:
+    get:
+      tags: [健康检查]
+      summary: 进程存活
+      security: []
+      responses:
+        "200":
+          description: 正常
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+  /readyz:
+    get:
+      tags: [健康检查]
+      summary: 就绪检查（含数据库连通性）
+      security: []
+      responses:
+        "200":
+          description: 就绪
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+        "503":
+          description: 数据库不可用
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+
+  /api/v1/articles:
+    get:
+      tags: [前台]
+      summary: 已发布文章列表
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize10"
+        - { name: keyword, in: query, description: 标题关键词，最多 64 字符, schema: { type: string, maxLength: 64 } }
+        - { name: category, in: query, description: 分类名称, schema: { type: string, maxLength: 64 } }
+        - { name: tag, in: query, description: 标签名称, schema: { type: string, maxLength: 64 } }
+      responses:
+        "200":
+          description: 分页结果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleSummaryPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/articles/{id}:
+    get:
+      tags: [前台]
+      summary: 文章详情
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: 文章
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/categories:
+    get:
+      tags: [前台]
+      summary: 分类列表（含文章数）
+      security: []
+      responses:
+        "200":
+          description: 分类
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryList" }
+  /api/v1/tags:
+    get:
+      tags: [前台]
+      summary: 标签列表（含文章数）
+      security: []
+      responses:
+        "200":
+          description: 标签
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TagList" }
+  /api/v1/moments:
+    get:
+      tags: [前台]
+      summary: 说说列表
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize20"
+      responses:
+        "200":
+          description: 分页结果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MomentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/friend-links:
+    get:
+      tags: [前台]
+      summary: 友链列表
+      security: []
+      responses:
+        "200":
+          description: 友链
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FriendLinkList" }
+  /api/v1/changelogs:
+    get:
+      tags: [前台]
+      summary: 建站日志
+      security: []
+      responses:
+        "200":
+          description: 日志
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChangelogList" }
+  /api/v1/projects:
+    get:
+      tags: [前台]
+      summary: 作品列表
+      security: []
+      responses:
+        "200":
+          description: 作品
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectList" }
+  /api/v1/pages/{key}:
+    get:
+      tags: [前台]
+      summary: 关于页内容（Markdown）
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/PageKey"
+      responses:
+        "200":
+          description: 页面
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Page" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/site:
+    get:
+      tags: [前台]
+      summary: 站点公告与统计
+      security: []
+      responses:
+        "200":
+          description: 站点信息
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Site" }
+  /api/v1/site/views:
+    post:
+      tags: [前台]
+      summary: 访问量 +1
+      security: []
+      responses:
+        "200":
+          description: 最新访问量
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [viewCount]
+                properties:
+                  viewCount: { type: integer, format: int64 }
+
+  /api/v1/comments:
+    get:
+      tags: [评论]
+      summary: 评论列表（顶层评论分页，附带全部回复）
+      security: []
+      parameters:
+        - { name: articleId, in: query, description: 文章 ID；不传则为留言板, schema: { type: integer, format: int64, minimum: 1 } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize10"
+      responses:
+        "200":
+          description: 分页结果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommentThreadPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [评论]
+      summary: 发表评论
+      description: |
+        访客需填写昵称和邮箱；携带管理员 token 时以管理员身份发表，昵称等字段取自账号资料。
+        按 IP 限流，超出返回 429。
+      security: [{}, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentInput" }
+      responses:
+        "201":
+          description: 已发表
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+  /api/v1/auth/login:
+    post:
+      tags: [账号]
+      summary: 登录
+      description: 按 IP 限流（每分钟 5 次）。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/InvalidCredentials" }
+        "429": { $ref: "#/components/responses/TooMany" }
+  /api/v1/auth/me:
+    get:
+      tags: [账号]
+      summary: 当前账号
+      responses:
+        "200":
+          description: 账号资料
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/auth/profile:
+    put:
+      tags: [账号]
+      summary: 修改资料
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileInput" }
+      responses:
+        "200":
+          description: 修改后的资料
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/auth/password:
+    put:
+      tags: [账号]
+      summary: 修改密码
+      description: 成功后所有旧 token 失效，响应中返回当前会话的新 token。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, description: 8-72 字节 }
+      responses:
+        "200":
+          description: 新 token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: 未登录（UNAUTHORIZED）或当前密码错误（INVALID_CREDENTIALS）
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/v1/admin/stats:
+    get:
+      tags: [后台]
+      summary: 后台首页统计
+      responses:
+        "200":
+          description: 统计
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminStats" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/admin/articles:
+    get:
+      tags: [后台]
+      summary: 文章列表（含草稿）
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize12"
+        - { name: status, in: query, schema: { type: string, enum: [draft, published] } }
+        - { name: keyword, in: query, schema: { type: string, maxLength: 64 } }
+        - { name: categoryId, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: tagId, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "200":
+          description: 分页结果（不含正文）
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminArticlePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 新建文章
+      requestBody: { $ref: "#/components/requestBodies/ArticleInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+  /api/v1/admin/articles/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    get:
+      tags: [后台]
+      summary: 文章详情（含正文）
+      responses:
+        "200":
+          description: 文章
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminArticle" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [后台]
+      summary: 修改文章
+      requestBody: { $ref: "#/components/requestBodies/ArticleInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+    delete:
+      tags: [后台]
+      summary: 删除文章（连同评论）
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/categories:
+    get:
+      tags: [后台]
+      summary: 分类列表
+      responses:
+        "200":
+          description: 分类
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 新建分类
+      requestBody: { $ref: "#/components/requestBodies/NameInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/admin/categories/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [后台]
+      summary: 重命名分类
+      requestBody: { $ref: "#/components/requestBodies/NameInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [后台]
+      summary: 删除分类（文章变为未分类）
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/tags:
+    get:
+      tags: [后台]
+      summary: 标签列表
+      responses:
+        "200":
+          description: 标签
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TagList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 新建标签
+      requestBody: { $ref: "#/components/requestBodies/NameInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/admin/tags/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [后台]
+      summary: 重命名标签
+      requestBody: { $ref: "#/components/requestBodies/NameInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [后台]
+      summary: 删除标签（从所有文章移除）
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/comments:
+    get:
+      tags: [后台]
+      summary: 全部评论（含 IP、邮箱）
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize12"
+      responses:
+        "200":
+          description: 分页结果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminCommentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/admin/comments/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    delete:
+      tags: [后台]
+      summary: 删除评论（连同回复）
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/moments:
+    get:
+      tags: [后台]
+      summary: 说说列表
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize20"
+      responses:
+        "200":
+          description: 分页结果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MomentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 发布说说
+      requestBody: { $ref: "#/components/requestBodies/MomentInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/admin/moments/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [后台]
+      summary: 修改说说
+      requestBody: { $ref: "#/components/requestBodies/MomentInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [后台]
+      summary: 删除说说
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/friend-links:
+    get:
+      tags: [后台]
+      summary: 友链列表
+      responses:
+        "200":
+          description: 友链
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FriendLinkList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 新增友链
+      requestBody: { $ref: "#/components/requestBodies/FriendLinkInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/admin/friend-links/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [后台]
+      summary: 修改友链
+      requestBody: { $ref: "#/components/requestBodies/FriendLinkInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [后台]
+      summary: 删除友链
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/changelogs:
+    get:
+      tags: [后台]
+      summary: 建站日志列表
+      responses:
+        "200":
+          description: 日志
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChangelogList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 新增建站日志
+      requestBody: { $ref: "#/components/requestBodies/ChangelogInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/admin/changelogs/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [后台]
+      summary: 修改建站日志
+      requestBody: { $ref: "#/components/requestBodies/ChangelogInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [后台]
+      summary: 删除建站日志
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/projects:
+    get:
+      tags: [后台]
+      summary: 作品列表
+      responses:
+        "200":
+          description: 作品
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [后台]
+      summary: 新增作品
+      requestBody: { $ref: "#/components/requestBodies/ProjectInput" }
+      responses:
+        "201": { $ref: "#/components/responses/Created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/admin/projects/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [后台]
+      summary: 修改作品
+      requestBody: { $ref: "#/components/requestBodies/ProjectInput" }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [后台]
+      summary: 删除作品
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/admin/pages/{key}:
+    put:
+      tags: [后台]
+      summary: 修改关于页内容
+      parameters:
+        - $ref: "#/components/parameters/PageKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, description: Markdown，最大 4MB }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/TooLarge" }
+  /api/v1/admin/site/notice:
+    put:
+      tags: [后台]
+      summary: 修改站点公告
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notice]
+              properties:
+                notice: { type: string }
+      responses:
+        "204": { $ref: "#/components/responses/NoContent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/admin/uploads:
+    post:
+      tags: [后台]
+      summary: 申请图片上传凭证
+      description: |
+        返回对象存储的预签名地址。客户端随后用 `method`（PUT）把文件直接上传到 `uploadUrl`，
+        并带上 `headers` 中的全部请求头；上传完成后 `url` 即为公开访问地址。
+        仅支持 jpg、png、gif、webp、avif，单个文件最大 10MB。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, size]
+              properties:
+                filename: { type: string, examples: [cover.png] }
+                size: { type: integer, format: int64, description: 文件字节数 }
+      responses:
+        "200":
+          description: 上传凭证
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UploadTicket" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    PageKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string, enum: [about-site, about-me] }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize10:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+    PageSize12:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 12 }
+    PageSize20:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  requestBodies:
+    ArticleInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ArticleInput" }
+    NameInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string, maxLength: 64, description: 全站唯一 }
+    MomentInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/MomentInput" }
+    FriendLinkInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/FriendLinkInput" }
+    ChangelogInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ChangelogInput" }
+    ProjectInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ProjectInput" }
+
+  responses:
+    Created:
+      description: 已创建
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id]
+            properties:
+              id: { type: integer, format: int64 }
+    NoContent:
+      description: 成功，无响应体
+    BadRequest:
+      description: 参数错误（BAD_REQUEST）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: 未登录或 token 已失效（UNAUTHORIZED）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InvalidCredentials:
+      description: 邮箱或密码错误（INVALID_CREDENTIALS）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: 不存在（NOT_FOUND）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: 名称已被占用（CONFLICT）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooLarge:
+      description: 请求体超出上限（BODY_TOO_LARGE）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooMany:
+      description: 请求过于频繁（RATE_LIMITED）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, examples: [BAD_REQUEST] }
+            message: { type: string }
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, unavailable] }
+        database: { type: string, enum: [up, down] }
+
+    PageMeta:
+      type: object
+      required: [total, page, pageSize]
+      properties:
+        total: { type: integer, format: int64 }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    CategoryRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    TagRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+
+    ArticleSummary:
+      type: object
+      required: [id, title, summary, category, tags, publishedAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        summary: { type: string, description: 由正文自动生成的摘要 }
+        category:
+          oneOf:
+            - $ref: "#/components/schemas/CategoryRef"
+            - type: "null"
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/TagRef" }
+        publishedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ArticleDetail:
+      allOf:
+        - $ref: "#/components/schemas/ArticleSummary"
+        - type: object
+          required: [content]
+          properties:
+            content: { type: string, description: Markdown }
+    ArticleSummaryPage:
+      allOf:
+        - $ref: "#/components/schemas/PageMeta"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ArticleSummary" }
+
+    AdminArticle:
+      type: object
+      required: [id, title, summary, status, category, tags, publishedAt, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        summary: { type: string }
+        content: { type: string, description: 仅详情接口返回 }
+        status: { type: string, enum: [draft, published] }
+        category:
+          oneOf:
+            - $ref: "#/components/schemas/CategoryRef"
+            - type: "null"
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/TagRef" }
+        publishedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminArticlePage:
+      allOf:
+        - $ref: "#/components/schemas/PageMeta"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AdminArticle" }
+    ArticleInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, maxLength: 200 }
+        content: { type: string, description: Markdown，最大 4MB；发布时不能为空 }
+        categoryId: { type: [integer, "null"], format: int64 }
+        tagIds:
+          type: array
+          maxItems: 20
+          items: { type: integer, format: int64 }
+        status: { type: string, enum: [draft, published], default: draft }
+        publishedAt: { type: [string, "null"], format: date-time, description: 不传则为当前时间 }
+
+    Category:
+      type: object
+      required: [id, name, articleCount, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        articleCount: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+    CategoryList:
+      type: object
+      required: [items, uncategorizedCount]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Category" }
+        uncategorizedCount: { type: integer, format: int64 }
+    Tag:
+      type: object
+      required: [id, name, articleCount, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        articleCount: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+    TagList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Tag" }
+
+    Moment:
+      type: object
+      required: [id, content, images, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        content: { type: string }
+        images:
+          type: array
+          items: { type: string, format: uri }
+        createdAt: { type: string, format: date-time }
+    MomentPage:
+      allOf:
+        - $ref: "#/components/schemas/PageMeta"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Moment" }
+    MomentInput:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, maxLength: 2000 }
+        images:
+          type: array
+          maxItems: 9
+          items: { type: string, format: uri }
+        createdAt: { type: [string, "null"], format: date-time, description: 不传则为当前时间 }
+
+    FriendLink:
+      type: object
+      required: [id, name, url, avatar, description, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        url: { type: string, format: uri }
+        avatar: { type: string, format: uri }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+    FriendLinkList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/FriendLink" }
+    FriendLinkInput:
+      type: object
+      required: [name, url]
+      properties:
+        name: { type: string, maxLength: 64 }
+        url: { type: string, format: uri }
+        avatar: { type: string, format: uri }
+        description: { type: string }
+
+    Changelog:
+      type: object
+      required: [id, items, loggedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        items:
+          type: array
+          items: { type: string }
+        loggedAt: { type: string, format: date-time }
+    ChangelogList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Changelog" }
+    ChangelogInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items: { type: string, maxLength: 500 }
+        loggedAt: { type: [string, "null"], format: date-time, description: 不传则为当前时间 }
+
+    Project:
+      type: object
+      required: [id, name, description, cover, url, sortOrder]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        description: { type: string }
+        cover: { type: string, format: uri }
+        url: { type: string, format: uri }
+        sortOrder: { type: integer, format: int32 }
+    ProjectList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Project" }
+    ProjectInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 64 }
+        description: { type: string }
+        cover: { type: string, format: uri }
+        url: { type: string, format: uri }
+        sortOrder: { type: integer, format: int32, description: 越小越靠前 }
+
+    Page:
+      type: object
+      required: [key, content, updatedAt]
+      properties:
+        key: { type: string, enum: [about-site, about-me] }
+        content: { type: string, description: Markdown }
+        updatedAt: { type: string, format: date-time }
+    Site:
+      type: object
+      required: [notice, viewCount, articleCount, categoryCount, tagCount]
+      properties:
+        notice: { type: string }
+        viewCount: { type: integer, format: int64 }
+        articleCount: { type: integer, format: int64 }
+        categoryCount: { type: integer, format: int64 }
+        tagCount: { type: integer, format: int64 }
+
+    Comment:
+      type: object
+      required: [id, parentId, nickname, website, avatar, content, isAdmin, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        parentId: { type: [integer, "null"], format: int64 }
+        nickname: { type: string }
+        website: { type: string }
+        avatar: { type: string, format: uri }
+        content: { type: string }
+        isAdmin: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    CommentThread:
+      allOf:
+        - $ref: "#/components/schemas/Comment"
+        - type: object
+          required: [replies]
+          properties:
+            replies:
+              type: array
+              items: { $ref: "#/components/schemas/Comment" }
+    CommentThreadPage:
+      allOf:
+        - $ref: "#/components/schemas/PageMeta"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CommentThread" }
+    CommentInput:
+      type: object
+      required: [content]
+      properties:
+        articleId: { type: integer, format: int64, description: 文章 ID；0 或不传为留言板 }
+        parentId: { type: integer, format: int64, description: 回复的评论 ID，0 或不传为顶层评论 }
+        nickname: { type: string, description: 访客必填，2-16 个字符（字母、数字、中文、_ 或 -） }
+        email: { type: string, format: email, description: 访客必填，不公开 }
+        website: { type: string, description: 可选，http(s) 链接 }
+        content: { type: string, maxLength: 1000 }
+
+    AdminComment:
+      type: object
+      required: [id, parentId, article, nickname, email, website, avatar, content, isAdmin, ip, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        parentId: { type: [integer, "null"], format: int64 }
+        article:
+          description: 所属文章；留言板评论为 null
+          oneOf:
+            - $ref: "#/components/schemas/ArticleLink"
+            - type: "null"
+        nickname: { type: string }
+        email: { type: string }
+        website: { type: string }
+        avatar: { type: string }
+        content: { type: string }
+        isAdmin: { type: boolean }
+        ip: { type: string }
+        createdAt: { type: string, format: date-time }
+    AdminCommentPage:
+      allOf:
+        - $ref: "#/components/schemas/PageMeta"
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AdminComment" }
+    ArticleLink:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+
+    User:
+      type: object
+      required: [id, email, nickname, avatar, website, role, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, format: email }
+        nickname: { type: string }
+        avatar: { type: string }
+        website: { type: string }
+        role: { type: string, enum: [admin] }
+        createdAt: { type: string, format: date-time }
+    LoginResult:
+      type: object
+      required: [token, expiresAt, user]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+        user: { $ref: "#/components/schemas/User" }
+    ProfileInput:
+      type: object
+      required: [nickname]
+      properties:
+        nickname: { type: string, minLength: 1, maxLength: 32 }
+        avatar: { type: string, description: 可选，http(s) 链接 }
+        website: { type: string, description: 可选，http(s) 链接 }
+    AdminStats:
+      type: object
+      required: [publishedCount, draftCount, categoryCount, tagCount, commentCount, momentCount, friendLinkCount, projectCount, viewCount]
+      properties:
+        publishedCount: { type: integer, format: int64 }
+        draftCount: { type: integer, format: int64 }
+        categoryCount: { type: integer, format: int64 }
+        tagCount: { type: integer, format: int64 }
+        commentCount: { type: integer, format: int64 }
+        momentCount: { type: integer, format: int64 }
+        friendLinkCount: { type: integer, format: int64 }
+        projectCount: { type: integer, format: int64 }
+        viewCount: { type: integer, format: int64 }
+    UploadTicket:
+      type: object
+      required: [method, uploadUrl, headers, key, url, expiresAt, maxBytes]
+      properties:
+        method: { type: string, enum: [PUT] }
+        uploadUrl: { type: string, format: uri, description: 预签名上传地址 }
+        headers:
+          type: object
+          additionalProperties: { type: string }
+          description: 上传时必须携带的请求头
+        key: { type: string, description: 对象存储中的路径 }
+        url: { type: string, format: uri, description: 上传完成后的公开地址 }
+        expiresAt: { type: string, format: date-time }
+        maxBytes: { type: integer, format: int64 }
+
+security:
+  - bearerAuth: []

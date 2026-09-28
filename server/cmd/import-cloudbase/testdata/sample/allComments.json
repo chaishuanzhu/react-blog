@@ -1,0 +1,5 @@
+{"_id":"m1","name":"访客甲","email":"a@example.com","link":"","content":"写得很好！","date":1648100000000,"avatar":"https://q1.qlogo.cn/g?b=qq&nk=1&s=100","postTitle":"react-hooks-intro","replyId":""}
+{"_id":"m2","name":"飞鸟","email":"admin@example.com","link":"https://lzxjack.top","content":"谢谢支持~","date":1648200000000,"avatar":"https://img.example.com/admin.webp","postTitle":"react-hooks-intro","replyId":"m1"}
+{"_id":"m3","name":"访客乙","email":"b@example.com","link":"https://b.example.com","content":"留言板第一条","date":1648300000000,"avatar":"https://img.example.com/d1.webp","postTitle":"","replyId":""}
+{"_id":"m4","name":"访客丙","email":"c@example.com","link":"","content":"回复一条已删除的评论","date":1648400000000,"avatar":"https://img.example.com/d2.webp","postTitle":"","replyId":"deleted-parent"}
+{"_id":"m5","name":"访客丁","email":"d@example.com","link":"","content":"文章已不存在","date":1648500000000,"avatar":"https://img.example.com/d3.webp","postTitle":"removed-article","replyId":""}

@@ -1,0 +1,37 @@
+# Single container: blog at /, admin at /admin/, API at /api/v1, all on port 8080.
+#
+#   cp server/.env.example server/.env   # then fill it in
+#   docker compose up -d --build
+#
+# The container speaks plain HTTP. Put TLS in front of it (CDN, cloud load balancer, or a host
+# nginx/Caddy) and keep the Host header when proxying; set TRUSTED_PROXIES to that proxy's address
+# so comment rate limiting sees the real client IP.
+
+services:
+  blog:
+    build: .
+    image: blog:latest
+    restart: unless-stopped
+    env_file: server/.env
+    environment:
+      APP_ENV: production
+      WEB_DIR: /srv/web
+      ADMIN_DIR: /srv/admin
+    ports:
+      - "8080:8080"
+
+  # Optional local MySQL: `docker compose --profile mysql up -d --build`, and point DATABASE_DSN in
+  # server/.env at it, e.g. blog:<password>@tcp(mysql:3306)/blog
+  mysql:
+    image: mysql:8.0
+    profiles: ["mysql"]
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    env_file: server/.env
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:

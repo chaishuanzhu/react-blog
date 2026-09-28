@@ -1,0 +1,5 @@
+{"_id":"a1","title":"React Hooks 入门","titleEng":"react-hooks-intro","content":"# React Hooks\n\n**Hooks** 让函数组件拥有状态。\n\n```js\nconst [n, setN] = useState(0)\n```\n\n详见 [官方文档](https://react.dev)。","tags":["React","TypeScript"],"classes":"前端","date":1648000000000,"post":true,"url":"https://lzxjack.top/post?title=react-hooks-intro"}
+{"_id":"a2","title":"TypeScript 泛型 50% 指南","titleEng":"ts-generics","content":"泛型是 TypeScript 的核心能力之一。","tags":["TypeScript"],"classes":"前端","date":{"$date":1649000000000},"post":true}
+{"_id":"a3","title":"Go 并发模式","titleEng":"go-concurrency","content":"goroutine 与 channel。","tags":["Go","并发"],"classes":"Go语言","date":1650000000000,"post":true}
+{"_id":"a4","title":"未完成的草稿","titleEng":"draft-one","content":"还没写完","tags":[],"classes":"","date":1651000000000,"post":false}
+{"_id":"a5","title":"React Hooks 入门（重复）","titleEng":"react-hooks-intro","content":"重复 titleEng 的文章","tags":["React"],"classes":"","date":1652000000000,"post":true}
