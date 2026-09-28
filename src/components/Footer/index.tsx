@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { icp_no, icp_site, source_github } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
 
 import s from './index.scss';
 
@@ -12,22 +12,28 @@ const Footer: React.FC = () => {
     'Webpack',
     'AntD',
     'ahooks',
-    'CloudBase'
+    'Go',
+    'MySQL'
   ];
+  const { sourceUrl, icp } = siteConfig;
 
   return (
     <footer className={s.footer}>
       <span>
         个人博客系统
-        <a href={source_github} target='_blank' rel='noreferrer' className={s.text}>
-          「源代码」
-        </a>
+        {sourceUrl && (
+          <a href={sourceUrl} target='_blank' rel='noreferrer' className={s.text}>
+            「源代码」
+          </a>
+        )}
       </span>
-      <span>
-        <a href={icp_site} target='_blank' rel='noreferrer' className={s.text}>
-          {icp_no}
-        </a>
-      </span>
+      {icp.no && (
+        <span>
+          <a href={icp.url} target='_blank' rel='noreferrer' className={s.text}>
+            {icp.no}
+          </a>
+        </span>
+      )}
       <span>
         {frameArr.map((item, index) => (
           <span className={s.siteFrame} key={index}>

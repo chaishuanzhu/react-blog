@@ -8,7 +8,8 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
 
 import MarkDown from '@/components/MarkDown';
-import { myEmail, smallLoadingUrl } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
+import type { Comment } from '@/utils/api';
 import { useLazyImg } from '@/utils/hooks/useLazyImg';
 
 import EditBox from '../../EditBox';
@@ -18,32 +19,16 @@ dayjs.locale('zh-cn');
 dayjs.extend(relativeTime);
 
 interface Props {
-  _id?: string;
-  avatar?: string;
-  link?: string;
-  name?: string;
-  date?: number;
-  content?: string;
-  email?: string;
+  comment: Comment;
   isReply?: boolean;
-  replyRun?: Function;
-  title?: string;
+  articleId?: number;
+  onPosted?: () => void;
 }
 
-const MsgItem: React.FC<Props> = ({
-  _id,
-  avatar,
-  link,
-  name,
-  date,
-  content,
-  email,
-  isReply,
-  replyRun,
-  title
-}) => {
+const MsgItem: React.FC<Props> = ({ comment, isReply, articleId, onPosted }) => {
+  const { id, avatar, website, nickname, createdAt, content, isAdmin } = comment;
   const [showReply, { toggle: toggleReply, setFalse: closeReply }] = useBoolean(false);
-  const { imgRef, imgUrl } = useLazyImg(avatar!, smallLoadingUrl);
+  const { imgRef, imgUrl } = useLazyImg(avatar, siteConfig.loadingImage);
 
   return (
     <div
@@ -56,8 +41,8 @@ const MsgItem: React.FC<Props> = ({
           <img
             src={imgUrl}
             className={classNames({
-              [s.avatar]: imgUrl !== smallLoadingUrl,
-              [s.loading]: imgUrl === smallLoadingUrl
+              [s.avatar]: imgUrl !== siteConfig.loadingImage,
+              [s.loading]: imgUrl === siteConfig.loadingImage
             })}
           />
         </div>
@@ -70,31 +55,32 @@ const MsgItem: React.FC<Props> = ({
         <div className={s.contentBox}>
           <div className={s.usrInfo}>
             <a
-              href={link}
-              target={link ? '_blank' : '_self'}
-              rel='noreferrer'
+              href={website || undefined}
+              target={website ? '_blank' : '_self'}
+              rel='noreferrer nofollow'
               className={s.name}
-              style={{ cursor: link ? 'pointer' : 'default' }}
+              style={{ cursor: website ? 'pointer' : 'default' }}
             >
-              {name}
+              {nickname}
             </a>
-            {email === myEmail && <span className={s.flag}>站长</span>}
-            <span className={s.date}>{dayjs(date).fromNow()}</span>
+            {isAdmin && <span className={s.flag}>站长</span>}
+            <span className={s.date}>{dayjs(createdAt).fromNow()}</span>
           </div>
-          <MarkDown content={content || ''} className={s.content} />
+          <MarkDown content={content} className={s.content} />
         </div>
       </div>
 
-      <EditBox
-        closeReply={closeReply}
-        isReply={true}
-        className={classNames(s.replyBox, { [s.replyHidden]: !showReply })}
-        replyName={name}
-        replyId={_id}
-        replyRun={replyRun}
-        title={title}
-        ownerEmail={email}
-      />
+      {!isReply && (
+        <EditBox
+          closeReply={closeReply}
+          isReply={true}
+          className={classNames(s.replyBox, { [s.replyHidden]: !showReply })}
+          replyName={nickname}
+          parentId={id}
+          articleId={articleId}
+          onPosted={onPosted}
+        />
+      )}
     </div>
   );
 };

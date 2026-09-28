@@ -1,7 +1,9 @@
+import 'antd/dist/reset.css';
+
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router';
 
 import store from '@/redux/store';
 
@@ -11,11 +13,10 @@ if (module?.hot) {
   module.hot.accept();
 }
 
-ReactDOM.render(
+createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </Provider>,
-  document.getElementById('root')
+  </Provider>
 );

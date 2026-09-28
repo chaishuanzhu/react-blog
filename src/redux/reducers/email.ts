@@ -1,17 +1,13 @@
-import { SET_EMAIL } from '../constant';
+import type { UnknownAction } from 'redux';
 
-interface Action {
-  type: string;
-  data: string;
-}
+import { SET_EMAIL } from '../constant';
 
 const initState = '';
 
-export default function addReducer(preState = initState, action: Action) {
-  const { type, data } = action;
-  switch (type) {
+export default function addReducer(preState = initState, action: UnknownAction) {
+  switch (action.type) {
     case SET_EMAIL:
-      return data;
+      return action.data as string;
     default:
       return preState;
   }

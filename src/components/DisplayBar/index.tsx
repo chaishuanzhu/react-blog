@@ -1,4 +1,5 @@
-import React, { MouseEventHandler } from 'react';
+import type { MouseEventHandler } from 'react';
+import React from 'react';
 
 import DisplayBarLoading from './DisplayBarLoading';
 import s from './index.scss';

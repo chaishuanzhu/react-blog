@@ -1,4 +1,4 @@
-@import '../../styles/base.scss';
+@use '../../styles/base.scss' as *;
 
 #hljs {
   padding: 10px 20px;

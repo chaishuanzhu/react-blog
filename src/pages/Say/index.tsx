@@ -3,25 +3,16 @@ import React, { useState } from 'react';
 
 import ImgView from '@/components/ImgView';
 import Layout from '@/components/Layout';
-import { DB } from '@/utils/apis/dbConfig';
-import { getOrderData } from '@/utils/apis/getOrderData';
+import { getMoments } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
 import SayPop from './SayPop';
 
-interface SayType {
-  _id: string;
-  content: string;
-  date: number;
-  imgs: string[];
-}
-
 const Say: React.FC = () => {
-  const { data, loading } = useRequest(getOrderData, {
-    defaultParams: [{ dbName: DB.Say, sortKey: 'date' }],
+  const { data, loading } = useRequest(() => getMoments(), {
     retryCount: 3,
-    cacheKey: `Say-${DB.Say}`,
+    cacheKey: 'moments',
     staleTime
   });
 
@@ -35,12 +26,12 @@ const Say: React.FC = () => {
 
   return (
     <Layout title={Title.Say} loading={loading}>
-      {data?.data.map(({ _id, content, date, imgs }: SayType) => (
+      {data?.items.map(({ id, content, createdAt, images }) => (
         <SayPop
-          key={_id}
+          key={id}
           content={content}
-          date={date}
-          imgs={imgs}
+          date={createdAt}
+          imgs={images}
           handlePreView={handlePreView}
         />
       ))}

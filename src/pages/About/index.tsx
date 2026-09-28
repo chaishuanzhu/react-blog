@@ -2,7 +2,6 @@ import { useRequest, useToggle } from 'ahooks';
 import React from 'react';
 
 import Layout from '@/components/Layout';
-import { DB } from '@/utils/apis/dbConfig';
 import { staleTime } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
@@ -17,19 +16,18 @@ const About: React.FC = () => {
 
   const { data, loading } = useRequest(fetchData, {
     retryCount: 3,
-    cacheKey: `About-${DB.About}`,
+    cacheKey: 'About',
     staleTime
   });
 
   return (
     <Layout title={Title.About} loading={loading}>
       <Switch state={state} toggle={toggle} setLeft={setLeft} setRight={setRight} />
-      <AboutMe className={state ? '' : s.hidden} content={data?.about.data[1].content} />
+      <AboutMe className={state ? '' : s.hidden} content={data?.me.content} />
       <AboutSite
         className={state ? s.hidden : ''}
-        content={data?.about.data[0].content}
-        classes={data?.classes.data}
-        artSum={data?.artSum.total}
+        content={data?.site.content}
+        categories={data?.categories}
       />
     </Layout>
   );

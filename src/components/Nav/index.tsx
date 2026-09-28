@@ -17,11 +17,11 @@ import { Drawer } from 'antd';
 import classNames from 'classnames';
 import React from 'react';
 import { connect } from 'react-redux';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router';
 
 import { setMode, setNavShow } from '@/redux/actions';
-import { storeState } from '@/redux/interface';
-import { blogAdminUrl } from '@/utils/constant';
+import type { storeState } from '@/redux/interface';
+import { siteConfig } from '@/site.config';
 import { modeMap, modeMapArr } from '@/utils/modeMap';
 
 import { useLinkList } from './config';
@@ -39,8 +39,7 @@ const bodyStyle = window.document.getElementsByTagName('body')[0].style;
 const Nav: React.FC<Props> = ({ navShow, setNavShow, mode, setMode }) => {
   const navigate = useNavigate();
 
-  // eslint-disable-next-line no-unused-vars
-  const [_, setLocalMode] = useLocalStorageState('localMode');
+  const [, setLocalMode] = useLocalStorageState('localMode');
   const { navArr, secondNavArr, mobileNavArr } = useLinkList();
   const [visible, setVisible] = useSafeState(false);
 
@@ -72,7 +71,7 @@ const Nav: React.FC<Props> = ({ navShow, setNavShow, mode, setMode }) => {
           </div>
 
           {/* 后台管理 */}
-          <a className={s.adminBtn} href={blogAdminUrl} target='_blank' rel='noreferrer'>
+          <a className={s.adminBtn} href={siteConfig.adminUrl} target='_blank' rel='noreferrer'>
             <SettingOutlined />
           </a>
 
@@ -129,8 +128,8 @@ const Nav: React.FC<Props> = ({ navShow, setNavShow, mode, setMode }) => {
       <Drawer
         placement='right'
         onClose={() => setVisible(false)}
-        visible={visible}
-        className='mobile-nav-box'
+        open={visible}
+        rootClassName='mobile-nav-box'
       >
         <div className={s.mobileNavBox}>
           {mobileNavArr.map((item, index) => (

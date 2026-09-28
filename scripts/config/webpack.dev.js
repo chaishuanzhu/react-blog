@@ -2,7 +2,7 @@ const path = require('path');
 const { merge } = require('webpack-merge');
 
 const common = require('./webpack.common');
-const { ROOT_PATH, SERVER_HOST, SERVER_PORT } = require('../constant');
+const { ROOT_PATH, SERVER_HOST, SERVER_PORT, API_TARGET } = require('../constant');
 
 module.exports = merge(common, {
   target: 'web', // 解决热更新失效
@@ -23,7 +23,8 @@ module.exports = merge(common, {
       overlay: true // 当出现编译错误或警告时，在浏览器中显示全屏覆盖
     },
     // 解决路由跳转404问题
-    historyApiFallback: true
+    historyApiFallback: true,
+    proxy: [{ context: ['/api'], target: API_TARGET, changeOrigin: true }]
   },
   plugins: [],
 

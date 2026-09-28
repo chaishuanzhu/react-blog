@@ -1,40 +1,32 @@
 import { useRequest } from 'ahooks';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import Layout from '@/components/Layout';
-import { DB } from '@/utils/apis/dbConfig';
-import { getData } from '@/utils/apis/getData';
+import { getTags } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
 import s from './index.scss';
 
-interface TagType {
-  _id: string;
-  _openid: string;
-  tag: string;
-}
-
 const Tags: React.FC = () => {
   const navigate = useNavigate();
 
-  const { data, loading } = useRequest(getData, {
-    defaultParams: [DB.Tag],
+  const { data, loading } = useRequest(getTags, {
     retryCount: 3,
-    cacheKey: `Tags-${DB.Tag}`,
+    cacheKey: 'tags',
     staleTime
   });
 
   return (
     <Layout title={Title.Tags} loading={loading} className={s.tagsBox} rows={3}>
-      {data?.data.map((item: TagType) => (
+      {data?.map(item => (
         <span
           className={s.tagItem}
-          key={item._id}
-          onClick={() => navigate(`/artDetail?tag=${encodeURIComponent(item.tag)}`)}
+          key={item.id}
+          onClick={() => navigate(`/artDetail?tag=${encodeURIComponent(item.name)}`)}
         >
-          {item.tag}
+          {item.name}
         </span>
       ))}
     </Layout>

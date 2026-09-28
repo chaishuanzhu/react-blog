@@ -1,10 +1,10 @@
-@import '../../../../styles/base.scss';
+@use '../../../../styles/base.scss' as *;
 
 .ant-popover-arrow {
   display: none;
 }
 
-.ant-popover-inner {
+.ant-popover-container {
   border-radius: 16px;
   overflow: hidden;
   background-color: $themeColor1;

@@ -1,6 +1,5 @@
 import classNames from 'classnames';
 import React from 'react';
-import sanitizeHtml from 'sanitize-html';
 
 import MarkDown from '@/components/MarkDown';
 
@@ -20,7 +19,7 @@ const PreShow: React.FC<Props> = ({ closePre, content, className }) => {
       <div className={s.closeBtn} onClick={handleClose}>
         ×
       </div>
-      <MarkDown className={s.preMarked} content={sanitizeHtml(content!)} />
+      <MarkDown className={s.preMarked} content={content} />
     </div>
   );
 };

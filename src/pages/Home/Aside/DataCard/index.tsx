@@ -1,47 +1,37 @@
 import { useRequest } from 'ahooks';
 import React from 'react';
-import { connect } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import Card from '@/components/Card';
-import { setArtSum } from '@/redux/actions';
-import { DB } from '@/utils/apis/dbConfig';
+import { getSite } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 
-import { fetchData } from './fetchData';
 import s from './index.scss';
 
-interface Props {
-  setArtSum?: Function;
-}
-
-const DataCard: React.FC<Props> = ({ setArtSum }) => {
+const DataCard: React.FC = () => {
   const navigate = useNavigate();
-  const { data, loading } = useRequest(fetchData, {
+  const { data, loading } = useRequest(getSite, {
     retryCount: 3,
-    cacheKey: `DataCard-count-${DB.Article}-${DB.Class}-${DB.Tag}`,
-    staleTime,
-    onSuccess: data => setArtSum!(data?.articles.total)
+    cacheKey: 'site',
+    staleTime
   });
 
   return (
     <Card className={s.card} loading={loading}>
       <div className={s.blogData} onClick={() => navigate('/articles')}>
         <div className={s.name}>文章</div>
-        <div className={s.num}>{data?.articles.total}</div>
+        <div className={s.num}>{data?.articleCount}</div>
       </div>
       <div className={s.blogData} onClick={() => navigate('/classes')}>
         <div className={s.name}>分类</div>
-        <div className={s.num}>{data?.classes.total}</div>
+        <div className={s.num}>{data?.categoryCount}</div>
       </div>
       <div className={s.blogData} onClick={() => navigate('/tags')}>
         <div className={s.name}>标签</div>
-        <div className={s.num}>{data?.tags.total}</div>
+        <div className={s.num}>{data?.tagCount}</div>
       </div>
     </Card>
   );
 };
 
-export default connect(() => ({}), {
-  setArtSum
-})(DataCard);
+export default DataCard;

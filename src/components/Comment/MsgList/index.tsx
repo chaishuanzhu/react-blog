@@ -1,60 +1,37 @@
 import React from 'react';
 
 import LayoutLoading from '@/components/LayoutLoading';
+import type { CommentThread } from '@/utils/api';
 
-import { MsgType } from '..';
 import s from './index.scss';
 import MsgItem from './MsgItem';
 
 interface Props {
-  msgs?: MsgType[];
-  replys?: MsgType[];
+  threads?: CommentThread[];
   loading?: boolean;
-  replyRun?: Function;
-  title?: string;
+  articleId?: number;
+  onPosted?: () => void;
 }
 
-const MsgList: React.FC<Props> = ({ msgs, replys, loading, replyRun, title }) => {
+const MsgList: React.FC<Props> = ({ threads, loading, articleId, onPosted }) => {
   return (
     <>
       {loading ? (
         <LayoutLoading />
       ) : (
-        msgs?.map((msg: MsgType) => {
-          return (
-            <div key={msg._id} className={s.completeMsg}>
-              <MsgItem
-                _id={msg._id}
-                avatar={msg.avatar}
-                link={msg.link}
-                name={msg.name}
-                date={msg.date}
-                content={msg.content}
-                email={msg.email}
-                isReply={false}
-                replyRun={replyRun}
-                title={title}
-              />
-              {replys
-                ?.filter(item => item.replyId === msg._id)
-                .map((reply: MsgType) => (
-                  <MsgItem
-                    key={reply._id}
-                    _id={reply._id}
-                    avatar={reply.avatar}
-                    link={reply.link}
-                    name={reply.name}
-                    date={reply.date}
-                    content={reply.content}
-                    email={reply.email}
-                    isReply={true}
-                    replyRun={replyRun}
-                    title={title}
-                  />
-                ))}
-            </div>
-          );
-        })
+        threads?.map(thread => (
+          <div key={thread.id} className={s.completeMsg}>
+            <MsgItem
+              comment={thread}
+              isReply={false}
+              articleId={articleId}
+              onPosted={onPosted}
+            />
+            {thread.replies.map(reply => (
+              <MsgItem key={reply.id} comment={reply} isReply={true} />
+            ))}
+          </div>
+        ))
       )}
     </>
   );

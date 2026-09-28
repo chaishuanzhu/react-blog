@@ -4,13 +4,15 @@ import { MenuFoldOutlined } from '@ant-design/icons';
 import { useBoolean } from 'ahooks';
 import { Drawer } from 'antd';
 import classNames from 'classnames';
-import MarkNav from 'markdown-navbar';
 import React from 'react';
 import { connect } from 'react-redux';
 
 import { setNavShow } from '@/redux/actions';
 
 import s from './index.scss';
+import Toc from './Toc';
+
+export const POST_CONTENT = '#post-content';
 
 interface Props {
   content?: string;
@@ -23,12 +25,11 @@ const Navbar: React.FC<Props> = ({ content, setNavShow }) => {
   return (
     <>
       {/* 正常的目录 */}
-      <MarkNav
+      <Toc
+        target={POST_CONTENT}
+        content={content}
         className={classNames('postNavBar', s.navBar)}
-        source={content || ''}
         headingTopOffset={15}
-        ordered={false}
-        updateHashAuto={false}
         onNavItemClick={() => setNavShow?.(false)}
       />
       {/* 中屏显示的按钮 */}
@@ -39,16 +40,15 @@ const Navbar: React.FC<Props> = ({ content, setNavShow }) => {
       <Drawer
         placement='right'
         onClose={closeDrawer}
-        visible={visible}
-        className={classNames(s.drawer, 'mobile-navBar-box')}
-        width={340}
+        open={visible}
+        rootClassName={classNames(s.drawer, 'mobile-navBar-box')}
+        size={340}
       >
-        <MarkNav
+        <Toc
+          target={POST_CONTENT}
+          content={content}
           className='postNavBar'
-          source={content || ''}
           headingTopOffset={15 + 60}
-          ordered={false}
-          updateHashAuto={false}
           onNavItemClick={() => setNavShow?.(true)}
         />
       </Drawer>

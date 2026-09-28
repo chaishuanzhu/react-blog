@@ -1,41 +1,33 @@
 import { useRequest } from 'ahooks';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import Layout from '@/components/Layout';
-import { DB } from '@/utils/apis/dbConfig';
-import { getData } from '@/utils/apis/getData';
+import { getCategories } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
 import ClassBar from './ClassBar';
 import s from './index.scss';
 
-interface ClassType {
-  _id: string;
-  class: string;
-  count: number;
-}
-
 const Classes: React.FC = () => {
   const navigate = useNavigate();
 
-  const { data, loading } = useRequest(getData, {
-    defaultParams: [DB.Class],
+  const { data, loading } = useRequest(getCategories, {
     retryCount: 3,
-    cacheKey: `Classes-${DB.Class}`,
+    cacheKey: 'categories',
     staleTime
   });
 
   return (
     <Layout title={Title.Classes} loading={loading} className={s.classBox} rows={8}>
-      {data?.data.map((item: ClassType) => (
+      {data?.items.map(item => (
         <ClassBar
           className={s.classItem}
-          key={item._id}
-          content={item.class}
-          num={item.count}
-          onClick={() => navigate(`/artDetail?class=${encodeURIComponent(item.class)}`)}
+          key={item.id}
+          content={item.name}
+          num={item.articleCount}
+          onClick={() => navigate(`/artDetail?class=${encodeURIComponent(item.name)}`)}
         />
       ))}
     </Layout>

@@ -3,9 +3,7 @@ import React from 'react';
 
 import Layout from '@/components/Layout';
 import MyPagination from '@/components/MyPagination';
-import { DB } from '@/utils/apis/dbConfig';
-import { getWhereOrderPageSum } from '@/utils/apis/getWhereOrderPageSum';
-import { _ } from '@/utils/cloudBase';
+import { getArticles } from '@/utils/api';
 import { detailPostSize, staleTime } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
@@ -14,34 +12,26 @@ import Search from './Search';
 
 const Articles: React.FC = () => {
   const [page, setPage] = useSafeState(1);
+  const [keyword, setKeyword] = useSafeState('');
 
-  const [where, setWhere] = useSafeState(() => ({}));
-
-  const { data, loading, run } = useRequest(
-    () =>
-      getWhereOrderPageSum({
-        dbName: DB.Article,
-        where: { ...where, post: _.eq(true) },
-        page,
-        size: detailPostSize,
-        sortKey: 'date'
-      }),
+  const { data, loading } = useRequest(
+    () => getArticles({ page, pageSize: detailPostSize, keyword: keyword || undefined }),
     {
       retryCount: 3,
-      refreshDeps: [page],
-      cacheKey: `Articles-${DB.Article}-${JSON.stringify(where)}-${page}`,
+      refreshDeps: [page, keyword],
+      cacheKey: `Articles-${keyword}-${page}`,
       staleTime
     }
   );
 
   return (
     <Layout title={Title.Articles}>
-      <Search page={page} setPage={setPage} where={where} setWhere={setWhere} run={run} />
-      <ArtList articles={data?.articles.data} loading={loading} />
+      <Search page={page} setPage={setPage} keyword={keyword} setKeyword={setKeyword} />
+      <ArtList articles={data?.items} loading={loading} />
       <MyPagination
         current={page}
         defaultPageSize={detailPostSize}
-        total={data?.sum.total}
+        total={data?.total}
         setPage={setPage}
         autoScroll={true}
         scrollToTop={440}

@@ -1,26 +1,20 @@
 import React from 'react';
 
+import type { CategoryList } from '@/utils/api';
+
 import AboutText from './AboutText';
 import Chart from './Chart';
 
-export interface ClassType {
-  class: string;
-  count: number;
-  _id: string;
-  _openid: string;
-}
-
 interface Props {
   content?: string;
-  classes?: ClassType[];
-  artSum?: number;
+  categories?: CategoryList;
   className?: string;
 }
 
-const AboutSite: React.FC<Props> = ({ content, classes, artSum, className }) => {
+const AboutSite: React.FC<Props> = ({ content, categories, className }) => {
   return (
     <div className={className}>
-      <Chart classes={classes} artSum={artSum} />
+      <Chart categories={categories} />
       <AboutText content={content} />
     </div>
   );

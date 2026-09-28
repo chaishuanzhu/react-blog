@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router';
 
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -35,7 +35,7 @@ const Main: React.FC = () => {
               {/* <Route path='show' element={<Show />} /> */}
               <Route path='log' element={<Log />} />
               <Route path='about' element={<About />} />
-              <Route path='post' element={<Post />} />
+              <Route path='post/:id' element={<Post />} />
               <Route path='artDetail' element={<ArtDetail />} />
               <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>

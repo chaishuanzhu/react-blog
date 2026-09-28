@@ -1,18 +1,18 @@
-import { DB } from '@/utils/apis/dbConfig';
-import { getOrderData } from '@/utils/apis/getOrderData';
-import { getSum } from '@/utils/apis/getSum';
-import { _ } from '@/utils/cloudBase';
+import type { SitePage} from '@/utils/api';
+import { getCategories, getPage, toApiError } from '@/utils/api';
+
+const getPageOrEmpty = (key: 'about-site' | 'about-me'): Promise<SitePage> =>
+  getPage(key).catch(err => {
+    if (toApiError(err).status === 404) return { key, content: '' };
+    throw err;
+  });
 
 export const fetchData = async () => {
-  const [about, classes, artSum] = await Promise.all([
-    getOrderData({ dbName: DB.About }),
-    getOrderData({ dbName: DB.Class }),
-    getSum(DB.Article, { post: _.eq(true) })
+  const [site, me, categories] = await Promise.all([
+    getPageOrEmpty('about-site'),
+    getPageOrEmpty('about-me'),
+    getCategories()
   ]);
 
-  return {
-    about,
-    classes,
-    artSum
-  };
+  return { site, me, categories };
 };

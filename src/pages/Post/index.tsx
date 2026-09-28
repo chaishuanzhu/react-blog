@@ -1,13 +1,11 @@
-import useUrlState from '@ahooksjs/use-url-state';
 import { useRequest } from 'ahooks';
 import React from 'react';
+import { useParams } from 'react-router';
 
 import Comment from '@/components/Comment';
 import Layout from '@/components/Layout';
 import MarkDown from '@/components/MarkDown';
-import { DB } from '@/utils/apis/dbConfig';
-import { getWhereData } from '@/utils/apis/getWhereData';
-import { _ } from '@/utils/cloudBase';
+import { getArticle } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 
 import CopyRight from './CopyRight';
@@ -16,29 +14,34 @@ import Navbar from './Navbar';
 import PostTags from './PostTags';
 
 const Post: React.FC = () => {
-  const [search] = useUrlState();
+  const { id = '' } = useParams();
 
-  const { data, loading } = useRequest(getWhereData, {
-    defaultParams: [DB.Article, { titleEng: _.eq(search.title), post: _.eq(true) }],
-    retryCount: 3,
-    cacheKey: `Post-${DB.Article}-${search.title}`,
+  const { data, loading, error } = useRequest(() => getArticle(id), {
+    refreshDeps: [id],
+    cacheKey: `Post-${id}`,
     staleTime
   });
 
   return (
     <Layout
-      title={data?.data[0].title}
-      loading={loading}
-      classes={data?.data[0].classes}
-      date={data?.data[0].date}
+      title={error && !data ? '文章不存在' : data?.title}
+      loading={loading && !data}
+      classes={data?.category?.name}
+      date={data?.publishedAt}
       isPost={true}
       rows={14}
     >
-      <MarkDown content={data?.data[0].content} className={s.mb} />
-      <PostTags tags={data?.data[0].tags} />
-      <CopyRight title={data?.data[0].title} titleEng={data?.data[0].titleEng} />
-      <Comment titleEng={search.title} title={data?.data[0].title} />
-      <Navbar content={data?.data[0].content} />
+      {data && (
+        <>
+          <div id='post-content'>
+            <MarkDown content={data.content} className={s.mb} />
+          </div>
+          <PostTags tags={data.tags.map(tag => tag.name)} />
+          <CopyRight id={data.id} title={data.title} />
+          <Comment articleId={data.id} />
+          <Navbar content={data.content} />
+        </>
+      )}
     </Layout>
   );
 };

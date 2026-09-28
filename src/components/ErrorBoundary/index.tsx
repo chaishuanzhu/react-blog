@@ -1,12 +1,11 @@
 import React from 'react';
 
-export default class ErrorBoundary extends React.Component {
+export default class ErrorBoundary extends React.Component<{ children?: React.ReactNode }> {
   state = { hasError: false };
 
   static getDerivedStateFromError() {
     return { hasError: true };
   }
-
   render() {
     if (this.state.hasError) {
       return <h1>Something went wrong.</h1>;

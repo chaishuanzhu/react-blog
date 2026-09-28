@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import React from 'react';
 
-import { smallLoadingUrl } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
 import { useLazyImg } from '@/utils/hooks/useLazyImg';
 
 import s from './index.scss';
@@ -14,7 +14,7 @@ interface Props {
 }
 
 const LinkItem: React.FC<Props> = ({ link, avatar, name, descr }) => {
-  const { imgRef, imgUrl } = useLazyImg(avatar!, smallLoadingUrl);
+  const { imgRef, imgUrl } = useLazyImg(avatar!, siteConfig.loadingImage);
 
   return (
     <div className={s.item}>
@@ -23,8 +23,8 @@ const LinkItem: React.FC<Props> = ({ link, avatar, name, descr }) => {
           <img
             src={imgUrl}
             className={classNames({
-              [s.avatar]: imgUrl !== smallLoadingUrl,
-              [s.loading]: imgUrl === smallLoadingUrl
+              [s.avatar]: imgUrl !== siteConfig.loadingImage,
+              [s.loading]: imgUrl === siteConfig.loadingImage
             })}
           />
         </div>

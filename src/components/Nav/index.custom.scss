@@ -1,5 +1,5 @@
-@import './../../styles/base.scss';
-@import './../../styles/style.scss';
+@use './../../styles/base.scss' as *;
+@use './../../styles/style.scss' as *;
 
 .mobile-nav-box {
   display: none;
@@ -11,7 +11,7 @@
       display: none;
     }
 
-    .ant-drawer-content {
+    .ant-drawer-section {
       background-color: $themeColor;
       color: $textColor;
 

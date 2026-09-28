@@ -1,17 +1,13 @@
-import { SET_NAV_SHOW } from '../constant';
+import type { UnknownAction } from 'redux';
 
-interface Action {
-  type: string;
-  data: boolean;
-}
+import { SET_NAV_SHOW } from '../constant';
 
 const initState = true;
 
-export default function addReducer(preState = initState, action: Action) {
-  const { type, data } = action;
-  switch (type) {
+export default function addReducer(preState = initState, action: UnknownAction) {
+  switch (action.type) {
     case SET_NAV_SHOW:
-      return data;
+      return action.data as boolean;
     default:
       return preState;
   }

@@ -40,7 +40,7 @@ const MyPagination: React.FC<Props> = ({
             onChange={(page: number) => {
               setPage?.(page);
               setNavShow?.(false);
-              autoScroll && window.scrollTo(0, scrollToTop);
+              if (autoScroll) window.scrollTo(0, scrollToTop);
             }}
           />
         </div>

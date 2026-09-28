@@ -1,4 +1,4 @@
-@import '../../styles/base.scss';
+@use '../../styles/base.scss' as *;
 
 .classBox {
   display: flex;
@@ -7,7 +7,7 @@
 
   .classItem {
     width: 49%;
-    margin-bottom: $space / 2;
+    margin-bottom: calc($space / 2);
   }
 
   .classItem:nth-last-child(1),

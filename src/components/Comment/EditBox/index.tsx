@@ -1,37 +1,20 @@
-import useUrlState from '@ahooksjs/use-url-state';
 import { UserOutlined } from '@ant-design/icons';
 import {
   useBoolean,
   useKeyPress,
   useLocalStorageState,
   useMount,
-  useRequest,
   useSafeState
 } from 'ahooks';
 import { message } from 'antd';
 import classNames from 'classnames';
 import React, { useRef } from 'react';
 import { connect } from 'react-redux';
-import sanitizeHtml from 'sanitize-html';
 
 import { setAvatar, setEmail, setLink, setName } from '@/redux/actions';
-import { storeState } from '@/redux/interface';
-import { axiosAPI } from '@/utils/apis/axios';
-import { DB } from '@/utils/apis/dbConfig';
-import { setData } from '@/utils/apis/setData';
-import { auth } from '@/utils/cloudBase';
-import {
-  adminUid,
-  avatarArrLen,
-  defaultCommentAvatarArr,
-  emailApi,
-  myAvatar70,
-  myEmail,
-  myLink,
-  myName,
-  QQ
-} from '@/utils/constant';
-import { getRandomNum } from '@/utils/function';
+import type { storeState } from '@/redux/interface';
+import type { User } from '@/utils/api';
+import { clearToken, getMe, getToken, postComment, toApiError } from '@/utils/api';
 
 import AdminBox from './AdminBox';
 import Emoji from './Emoji';
@@ -39,8 +22,8 @@ import s from './index.scss';
 import PreShow from './PreShow';
 
 interface Props {
-  msgRun?: Function;
-  replyRun?: Function;
+  articleId?: number;
+  onPosted?: () => void;
   isReply?: boolean;
   name?: string;
   link?: string;
@@ -53,14 +36,18 @@ interface Props {
   closeReply?: Function;
   className?: string;
   replyName?: string;
-  replyId?: string;
-  title?: string;
-  ownerEmail?: string;
+  parentId?: number;
 }
 
+const maxContentLength = 1000;
+const reQQ = /^[1-9][0-9]{4,11}$/;
+const reQQEmail = /^([1-9][0-9]{4,11})@qq\.com$/i;
+
+const qqAvatar = (qq: string) => `https://q1.qlogo.cn/g?b=qq&nk=${qq}&s=100`;
+
 const EditBox: React.FC<Props> = ({
-  msgRun,
-  replyRun,
+  articleId,
+  onPosted,
   isReply = false,
   name,
   link,
@@ -72,153 +59,142 @@ const EditBox: React.FC<Props> = ({
   setName,
   closeReply,
   replyName,
-  replyId,
-  className,
-  title,
-  ownerEmail
+  parentId,
+  className
 }) => {
-  const [search] = useUrlState();
-
   const nameRef = useRef(null);
 
   const [showAdmin, setShowAdmin] = useSafeState(false);
   const [showPre, { toggle: togglePre, setFalse: closePre }] = useBoolean(false);
+  const [sending, setSending] = useSafeState(false);
 
   const [text, setText] = useSafeState('');
 
-  const [localName, setLocalName] = useLocalStorageState('name');
-  const [localEmail, setLocalEmail] = useLocalStorageState('email');
-  const [localLink, setLocalLink] = useLocalStorageState('link');
-  const [localAvatar, setLocalAvatar] = useLocalStorageState('avatar');
+  const [localName, setLocalName] = useLocalStorageState<string>('name');
+  const [localEmail, setLocalEmail] = useLocalStorageState<string>('email');
+  const [localLink, setLocalLink] = useLocalStorageState<string>('link');
 
-  const validateConfig = {
-    name: {
-      check: /^[\u4e00-\u9fa5_a-zA-Z0-9]{2,8}$/,
-      content: name,
-      errText: '昵称仅限中文、数字、字母，长度2~8！'
+  const isAdmin = !!getToken();
+  const qqMatch = reQQEmail.exec(email || '');
+  const previewAvatar = isAdmin ? avatar : qqMatch ? qqAvatar(qqMatch[1]) : '';
+
+  const applyAdmin = (user: User) => {
+    setName?.(user.nickname);
+    setEmail?.(user.email);
+    setLink?.(user.website);
+    setAvatar?.(user.avatar);
+  };
+
+  const applyVisitor = () => {
+    setName?.(localName || '');
+    setEmail?.(localEmail || '');
+    setLink?.(localLink || '');
+    setAvatar?.('');
+  };
+
+  const validateConfig = [
+    {
+      check: /^[\u4e00-\u9fa5A-Za-z0-9_\- ]{2,16}$/,
+      content: name?.trim(),
+      errText: '昵称仅限中文、数字、字母、下划线、短横线，长度2~16！'
     },
-    email: {
-      check: /\w[-\w.+]*@([A-Za-z0-9][-A-Za-z0-9]+\.)+[A-Za-z]{2,14}/,
-      content: email,
+    {
+      check: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+      content: email?.trim(),
       errText: '请输入正确的邮箱地址！'
     },
-    link: {
-      check: /^$|^((https|http|ftp|rtsp|mms)?:\/\/)[^\s]+/,
-      content: link,
-      errText: '请输入正确的url，或不填！'
-    },
-    text: {
-      check: /^[\s\S]*.*[^\s][\s\S]*$/,
-      content: text,
-      errText: '请输入内容再发布~'
+    {
+      check: /^$|^https?:\/\/\S+$/,
+      content: link?.trim(),
+      errText: '网址需以 http:// 或 https:// 开头，或不填！'
     }
-  };
+  ];
 
   const validate = () => {
-    Object.keys(validateConfig).forEach(item => {
-      const { check, errText, content } =
-        validateConfig[item as keyof typeof validateConfig];
-      if (!check.test(content!)) {
-        message.error(errText);
-        throw new Error('breakForEach');
-      }
-    });
-  };
-
-  const checkAdmin = () => {
-    if (
-      !adminLogined() &&
-      (name === myName ||
-        name === QQ ||
-        email === myEmail ||
-        link?.indexOf(myLink) !== -1)
-    ) {
-      message.warning('未登录不可以使用管理员账户（昵称、邮箱、网址）哦~');
-      throw new Error('Not Admin');
+    if (!text.trim()) {
+      message.error('请输入内容再发布~');
+      return false;
     }
+    if (Array.from(text).length > maxContentLength) {
+      message.error(`内容不能超过${maxContentLength}字！`);
+      return false;
+    }
+    if (isAdmin) return true;
+    const failed = validateConfig.find(({ check, content }) => !check.test(content || ''));
+    if (failed) {
+      message.error(failed.errText);
+      return false;
+    }
+    return true;
   };
 
   const submit = async () => {
+    if (sending || !validate()) return;
+    setSending(true);
     try {
-      validate();
-      checkAdmin();
-
-      const config = {
-        DBName: DB.Msg,
-        name: sanitizeHtml(name!),
-        email: sanitizeHtml(email!),
-        link: sanitizeHtml(link!),
-        content: sanitizeHtml(text),
-        date: new Date().getTime(),
-        avatar: avatar
-          ? avatar
-          : defaultCommentAvatarArr[getRandomNum(0, avatarArrLen - 1)],
-        postTitle: search.title || '',
-        replyId: replyId || ''
-      };
-
-      const isTrue = await setData(config);
-
-      if (isTrue) {
-        if (isReply) {
-          closeReply?.();
-          replyRun?.();
-          email !== ownerEmail && informUser();
-          informAdminReply();
-        } else {
-          msgRun?.();
-          informAdminMsg();
-        }
+      await postComment({
+        articleId,
+        parentId,
+        nickname: name?.trim() || '',
+        email: email?.trim() || '',
+        website: link?.trim() || '',
+        content: text
+      });
+      setText('');
+      closePre();
+      closeReply?.();
+      onPosted?.();
+      message.success(`${isReply ? '回复' : '发布'}${articleId ? '评论' : '留言'}成功！`);
+    } catch (err) {
+      const { status, message: errMsg } = toApiError(err);
+      if (status === 401) {
+        message.warning('登录已过期，请重新登录！');
+        applyVisitor();
+      } else if (status === 403) {
+        message.warning('不能使用站长的昵称或邮箱哦~');
+      } else if (status === 429) {
+        message.warning('发送太频繁了，请稍后再试~');
       } else {
-        message.error('发布失败，请重试！');
+        message.error(`发布失败：${errMsg}`);
       }
-    } catch {}
-  };
-
-  const adminLogined = () => {
-    if (!auth.hasLoginState()) return false;
-    if (auth.currentUser?.uid === adminUid) return true;
-    return false;
+    } finally {
+      setSending(false);
+    }
   };
 
   useMount(() => {
-    if (adminLogined()) {
-      // 管理员已登录
-      setName?.(myName);
-      setEmail?.(myEmail);
-      setLink?.(myLink);
-      setAvatar?.(myAvatar70);
+    if (isReply) return;
+    if (isAdmin) {
+      getMe().then(applyAdmin, () => {
+        clearToken();
+        applyVisitor();
+      });
       return;
     }
-    localName && localName !== myName && setName?.(localName);
-    localEmail && localEmail !== myEmail && setEmail?.(localEmail);
-    localLink && localLink.indexOf(myLink) === -1 && setLink?.(localLink);
-    localAvatar && setAvatar?.(localAvatar);
+    applyVisitor();
   });
 
   const handleName = () => {
-    const regQQ = /[1-9][0-9]{4,11}/;
+    if (isAdmin) return;
     if (name === 'admin') {
       setShowAdmin(true);
       setName?.('');
       return;
     }
-    if (!adminLogined() && (name === myName || name === QQ)) {
-      message.warning('未登录不可以使用管理员账户哦~');
-      setName?.('');
-      return;
-    }
-    if (regQQ.test(name!)) {
-      const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${name}&s=100`;
+    if (reQQ.test(name || '')) {
       const QQEmail = `${name}@qq.com`;
       setEmail?.(QQEmail);
-      setAvatar?.(avatarUrl);
       setLocalEmail(QQEmail);
-      setLocalAvatar(avatarUrl);
       setName?.('');
       return;
     }
-    setLocalName(name);
+    setLocalName(name || '');
+  };
+
+  const logout = () => {
+    clearToken();
+    applyVisitor();
+    message.success('已退出登录');
   };
 
   useKeyPress(13, handleName, {
@@ -237,62 +213,6 @@ const EditBox: React.FC<Props> = ({
     closeReply?.();
   };
 
-  const { run: informAdminMsg } = useRequest(
-    () =>
-      axiosAPI(emailApi, 'POST', {
-        flag: 0,
-        name,
-        search: search.title || '',
-        content: text,
-        title
-      }),
-    {
-      manual: true,
-      onSuccess: () => {
-        setText('');
-        message.success(`发布${search.title ? '评论' : '留言'}成功！`);
-      }
-    }
-  );
-
-  const { run: informAdminReply } = useRequest(
-    () =>
-      axiosAPI(emailApi, 'POST', {
-        flag: 1,
-        owner: replyName,
-        name,
-        search: search.title || '',
-        content: text,
-        title
-      }),
-    {
-      manual: true,
-      onSuccess: () => {
-        setText('');
-        message.success('已通知站长！');
-      }
-    }
-  );
-
-  const { run: informUser } = useRequest(
-    () =>
-      axiosAPI(emailApi, 'POST', {
-        flag: 2,
-        owner: replyName,
-        email: ownerEmail,
-        name,
-        search: search.title || '',
-        content: text,
-        title
-      }),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success(`已通知${search.title ? '评论' : '留言'}者！`);
-      }
-    }
-  );
-
   return (
     <div className={classNames(s.editBox, className)}>
       {isReply && (
@@ -301,19 +221,16 @@ const EditBox: React.FC<Props> = ({
         </div>
       )}
       <div className={s.flex}>
-        <AdminBox
-          showAdmin={showAdmin}
-          setShowAdmin={setShowAdmin}
-          setName={setName}
-          setEmail={setEmail}
-          setLink={setLink}
-          setAvatar={setAvatar}
-        />
+        <AdminBox showAdmin={showAdmin} setShowAdmin={setShowAdmin} onLogin={applyAdmin} />
 
         <div className={s.avatarBoxCol}>
-          <div className={s.avatarBox}>
-            {avatar ? (
-              <img src={avatar} className={s.editAvatar} />
+          <div
+            className={s.avatarBox}
+            title={isAdmin ? '点击退出登录' : undefined}
+            onClick={isAdmin ? logout : undefined}
+          >
+            {previewAvatar ? (
+              <img src={previewAvatar} className={s.editAvatar} />
             ) : (
               <UserOutlined className={s.noAvatar} />
             )}
@@ -329,6 +246,7 @@ const EditBox: React.FC<Props> = ({
                 className={s.inputValue}
                 placeholder='QQ号'
                 value={name}
+                readOnly={isAdmin}
                 onChange={e => setName?.(e.target.value)}
                 onBlur={handleName}
               />
@@ -340,8 +258,9 @@ const EditBox: React.FC<Props> = ({
                 className={s.inputValue}
                 placeholder='必填'
                 value={email}
+                readOnly={isAdmin}
                 onChange={e => setEmail?.(e.target.value)}
-                onBlur={e => setLocalEmail(e.target.value)}
+                onBlur={e => !isAdmin && setLocalEmail(e.target.value)}
               />
             </div>
             <div className={classNames(s.inputInfo, s.flex3)}>
@@ -351,8 +270,9 @@ const EditBox: React.FC<Props> = ({
                 className={s.inputValue}
                 placeholder='选填'
                 value={link}
+                readOnly={isAdmin}
                 onChange={e => setLink?.(e.target.value)}
-                onBlur={e => setLocalLink(e.target.value)}
+                onBlur={e => !isAdmin && setLocalLink(e.target.value)}
               />
             </div>
           </div>
@@ -376,7 +296,7 @@ const EditBox: React.FC<Props> = ({
               预览
             </div>
             <div className={s.sendBtn} onClick={submit}>
-              {isReply ? '回复' : ' 发布'}
+              {sending ? '发送中' : isReply ? '回复' : ' 发布'}
             </div>
           </div>
         </div>

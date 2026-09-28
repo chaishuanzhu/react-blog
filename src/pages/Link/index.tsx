@@ -2,8 +2,7 @@ import { useRequest } from 'ahooks';
 import React from 'react';
 
 import Layout from '@/components/Layout';
-import { DB } from '@/utils/apis/dbConfig';
-import { getData } from '@/utils/apis/getData';
+import { getFriendLinks } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 import { shuffleArray } from '@/utils/function';
 
@@ -11,31 +10,22 @@ import { Title } from '../titleConfig';
 import s from './index.scss';
 import LinkItem from './LinkItem';
 
-interface linkType {
-  _id: string;
-  link: string;
-  avatar: string;
-  name: string;
-  descr: string;
-}
-
 const Link: React.FC = () => {
-  const { data, loading } = useRequest(getData, {
-    defaultParams: [DB.Link],
+  const { data, loading } = useRequest(getFriendLinks, {
     retryCount: 3,
-    cacheKey: `Link-${DB.Link}`,
+    cacheKey: 'friend-links',
     staleTime
   });
 
   return (
     <Layout title={Title.Link} loading={loading} className={s.box}>
-      {shuffleArray(data?.data).map((item: linkType) => (
+      {shuffleArray(data || []).map(item => (
         <LinkItem
-          key={item._id}
-          link={item.link}
+          key={item.id}
+          link={item.url}
           avatar={item.avatar}
           name={item.name}
-          descr={item.descr}
+          descr={item.description}
         />
       ))}
     </Layout>

@@ -1,5 +1,6 @@
 import { Popover } from 'antd';
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 
 import s from './index.scss';
 
@@ -7,6 +8,7 @@ interface Props {
   isLink: boolean;
   link?: string;
   content?: ReactNode;
+  children?: ReactNode;
 }
 
 const IcoBtn: React.FC<Props> = ({ isLink, link, content, children }) => {
@@ -15,13 +17,8 @@ const IcoBtn: React.FC<Props> = ({ isLink, link, content, children }) => {
       {children}
     </a>
   ) : (
-    <Popover
-      trigger='hover'
-      className={s.socialBtn}
-      content={content}
-      overlayClassName={s.card}
-    >
-      {children}
+    <Popover trigger='hover' content={content} classNames={{ root: s.card }}>
+      <div className={s.socialBtn}>{children}</div>
     </Popover>
   );
 };

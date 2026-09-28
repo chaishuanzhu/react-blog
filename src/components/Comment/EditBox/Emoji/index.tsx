@@ -45,13 +45,12 @@ const Emoji: React.FC = () => {
       {emojiData.map((item, index) => (
         <Popover
           key={index}
-          className={classNames(s.emojiBtn, item.className)}
-          overlayClassName={s.emojiContent}
+          classNames={{ root: s.emojiContent }}
           placement='bottom'
           content={<EmojiItem emojiStr={item.emojiStr} />}
           trigger='click'
         >
-          <div>{item.show}</div>
+          <div className={classNames(s.emojiBtn, item.className)}>{item.show}</div>
         </Popover>
       ))}
     </>

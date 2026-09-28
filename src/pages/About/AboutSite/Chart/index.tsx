@@ -7,15 +7,14 @@ import ReactEChartsCore from 'echarts-for-react/lib/core';
 import React from 'react';
 import { connect } from 'react-redux';
 
-import { storeState } from '@/redux/interface';
+import type { storeState } from '@/redux/interface';
+import type { CategoryList } from '@/utils/api';
 
-import { ClassType } from '../index';
 import s from './index.scss';
 import { useOption } from './useOption';
 
 interface Props {
-  classes?: ClassType[];
-  artSum?: number;
+  categories?: CategoryList;
   mode?: number;
 }
 
@@ -28,8 +27,8 @@ echarts.use([
   LabelLayout
 ]);
 
-const Chart: React.FC<Props> = ({ classes, artSum, mode }) => {
-  const option = useOption(classes!, artSum!, mode!);
+const Chart: React.FC<Props> = ({ categories, mode }) => {
+  const option = useOption(categories, mode!);
 
   return (
     <div className={s.box}>

@@ -1,6 +1,1 @@
-export interface ArticleType {
-  _id: string;
-  title: string;
-  date: number;
-  titleEng: string;
-}
+export type { ArticleSummary as ArticleType } from '@/utils/api';

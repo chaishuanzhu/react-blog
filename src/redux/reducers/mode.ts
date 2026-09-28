@@ -1,17 +1,13 @@
-import { SET_MODE } from '../constant';
+import type { UnknownAction } from 'redux';
 
-interface Action {
-  type: string;
-  data: number;
-}
+import { SET_MODE } from '../constant';
 
 const initState = 0;
 
-export default function addReducer(preState = initState, action: Action) {
-  const { type, data } = action;
-  switch (type) {
+export default function addReducer(preState = initState, action: UnknownAction) {
+  switch (action.type) {
     case SET_MODE:
-      return data;
+      return action.data as number;
     default:
       return preState;
   }

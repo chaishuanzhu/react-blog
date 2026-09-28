@@ -1,6 +1,7 @@
 import { Skeleton } from 'antd';
 import classNames from 'classnames';
-import React, { MouseEventHandler } from 'react';
+import type { MouseEventHandler } from 'react';
+import React from 'react';
 
 import s from './index.scss';
 
@@ -9,6 +10,7 @@ interface Props {
   loading?: boolean;
   isStatic?: boolean;
   onClick?: MouseEventHandler<HTMLDivElement>;
+  children?: React.ReactNode;
 }
 
 const Card: React.FC<Props> = ({ children, className, loading, isStatic, onClick }) => {

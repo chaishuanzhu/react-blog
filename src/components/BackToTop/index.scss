@@ -1,5 +1,13 @@
-@import '../../styles//base.scss';
-@import '../../styles//style.scss';
+@use '../../styles//base.scss' as *;
+@use '../../styles//style.scss' as *;
+
+.box {
+  position: fixed;
+  right: 100px;
+  bottom: 50px;
+  z-index: 10;
+  cursor: pointer;
+}
 
 .backTop {
   height: 50px;

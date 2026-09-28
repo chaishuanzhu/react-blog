@@ -12,7 +12,7 @@ import Nav from '@/components/Nav';
 import s from './App.scss';
 import BackToTop from './components/BackToTop';
 import { setMode } from './redux/actions';
-import { storeState } from './redux/interface';
+import type { storeState } from './redux/interface';
 
 interface Props {
   mode?: number;

@@ -5,7 +5,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 
 import { setNavShow } from '@/redux/actions';
-import { siteTitle } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
 import useTop from '@/utils/hooks/useTop';
 
 import Card from '../Card';
@@ -20,8 +20,9 @@ interface Props {
   loading?: boolean;
   isPost?: boolean;
   classes?: string;
-  date?: number;
+  date?: string;
   rows?: number;
+  children?: React.ReactNode;
 }
 
 const Layout: React.FC<Props> = ({
@@ -35,7 +36,7 @@ const Layout: React.FC<Props> = ({
   isPost = false,
   rows
 }) => {
-  useTitle(`${siteTitle} | ${title || ''}`);
+  useTitle(`${siteConfig.title} | ${title || ''}`);
   useTop(setNavShow!);
 
   return (

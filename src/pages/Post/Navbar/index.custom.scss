@@ -1,5 +1,5 @@
-@import '../../../styles/base.scss';
-@import '../../../styles/style.scss';
+@use '../../../styles/base.scss' as *;
+@use '../../../styles/style.scss' as *;
 
 $title-level-margin: 18px;
 
@@ -70,7 +70,7 @@ $title-level-margin: 18px;
   display: none;
 }
 
-.ant-drawer-content {
+.ant-drawer-section {
   background-color: $themeColor;
   color: $textColor;
   font-family: 'dengxian';

@@ -12,10 +12,10 @@ export const getRandomNum = (Min: number, Max: number) => {
 
 /**
  * 打乱数组
- * @param {any[]} array
- * @return {any[]}
+ * @param {T[]} array
+ * @return {T[]}
  */
-export const shuffleArray = (array: any[]) => {
+export const shuffleArray = <T>(array: T[]): T[] => {
   if (!array) return [];
   const res = [...array];
   const len = res.length;

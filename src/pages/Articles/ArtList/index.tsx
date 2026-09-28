@@ -1,9 +1,9 @@
 import dayjs from 'dayjs';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import DisplayBar from '@/components/DisplayBar';
-import { ArticleType } from '@/pages/constant';
+import type { ArticleType } from '@/pages/constant';
 
 import s from './index.scss';
 
@@ -20,10 +20,10 @@ const ArtList: React.FC<Props> = ({ articles, loading }) => {
       {articles?.length ? (
         articles?.map((item: ArticleType) => (
           <DisplayBar
-            key={item._id}
+            key={item.id}
             content={item.title}
-            right={dayjs(item.date).format('YYYY-MM-DD')}
-            onClick={() => navigate(`/post?title=${encodeURIComponent(item.titleEng)}`)}
+            right={dayjs(item.publishedAt).format('YYYY-MM-DD')}
+            onClick={() => navigate(`/post/${item.id}`)}
             loading={loading}
           />
         ))

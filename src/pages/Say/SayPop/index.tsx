@@ -1,13 +1,13 @@
 import dayjs from 'dayjs';
 import React from 'react';
 
-import { myAvatar70 } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
 
 import s from './index.scss';
 
 interface Props {
   content: string;
-  date: number;
+  date: string;
   imgs: string[];
   handlePreView: (url: string) => void;
 }
@@ -15,7 +15,7 @@ interface Props {
 const SayPop: React.FC<Props> = ({ content, date, imgs, handlePreView }) => (
   <div className={s.sayItem}>
     <div className={s.avatarBox}>
-      <img src={myAvatar70} className={s.avatar} />
+      <img src={siteConfig.author.avatar} className={s.avatar} />
     </div>
 
     <div className={s.contentBox}>

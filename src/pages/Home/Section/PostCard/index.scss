@@ -1,5 +1,5 @@
-@import '../../../../styles/base.scss';
-@import '../../../../styles/style.scss';
+@use '../../../../styles/base.scss' as *;
+@use '../../../../styles/style.scss' as *;
 
 .tagBase {
   padding: 0 10px;

@@ -3,28 +3,18 @@ import { message } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useRef } from 'react';
 
-import { authLogin } from '@/utils/apis/authLogin';
-import { myAvatar70, myEmail, myLink, myName } from '@/utils/constant';
+import type { User } from '@/utils/api';
+import { login, toApiError } from '@/utils/api';
 
 import s from './index.scss';
 
 interface Props {
   showAdmin?: boolean;
   setShowAdmin?: Function;
-  setName?: Function;
-  setEmail?: Function;
-  setLink?: Function;
-  setAvatar?: Function;
+  onLogin?: (user: User) => void;
 }
 
-const AdminBox: React.FC<Props> = ({
-  showAdmin = false,
-  setShowAdmin,
-  setName,
-  setEmail,
-  setLink,
-  setAvatar
-}) => {
+const AdminBox: React.FC<Props> = ({ showAdmin = false, setShowAdmin, onLogin }) => {
   const pwdRef = useRef(null);
 
   const [adminEmail, setAdminEmail] = useSafeState('');
@@ -37,15 +27,14 @@ const AdminBox: React.FC<Props> = ({
   };
 
   const adminLogin = async () => {
-    if (await authLogin(adminEmail!, adminPwd!)) {
-      message.success('登陆成功！');
-      setName?.(myName);
-      setEmail?.(myEmail);
-      setLink?.(myLink);
-      setAvatar?.(myAvatar70);
+    try {
+      const user = await login(adminEmail.trim(), adminPwd);
+      message.success('登录成功！');
+      onLogin?.(user);
       hideAdmin();
-    } else {
-      message.error('登陆失败，请重试！');
+    } catch (err) {
+      const { status } = toApiError(err);
+      message.error(status === 429 ? '尝试次数过多，请稍后再试！' : '登录失败，请重试！');
     }
   };
 

@@ -2,45 +2,29 @@ import { useRequest } from 'ahooks';
 import React from 'react';
 
 import Layout from '@/components/Layout';
-import { DB } from '@/utils/apis/dbConfig';
-import { getOrderData } from '@/utils/apis/getOrderData';
+import { getProjects } from '@/utils/api';
 import { staleTime } from '@/utils/constant';
 
 import { Title } from '../titleConfig';
 import s from './index.scss';
 import ShowItem from './ShowItem';
 
-interface ShowType {
-  _id: string;
-  cover: string;
-  link: string;
-  name: string;
-  descr: string;
-}
-
 const Show: React.FC = () => {
-  const { data, loading } = useRequest(getOrderData, {
-    defaultParams: [
-      {
-        dbName: DB.Show,
-        sortKey: 'order',
-        isAsc: true
-      }
-    ],
+  const { data, loading } = useRequest(getProjects, {
     retryCount: 3,
-    cacheKey: `Show-${DB.Show}`,
+    cacheKey: 'projects',
     staleTime
   });
 
   return (
     <Layout title={Title.Show} loading={loading} className={s.showBox}>
-      {data?.data.map((item: ShowType) => (
+      {data?.map(item => (
         <ShowItem
-          key={item._id}
+          key={item.id}
           cover={item.cover}
-          link={item.link}
+          link={item.url}
           name={item.name}
-          descr={item.descr}
+          descr={item.description}
         />
       ))}
     </Layout>

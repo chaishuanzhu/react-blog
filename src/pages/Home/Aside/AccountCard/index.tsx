@@ -8,6 +8,7 @@ import { useAccount } from './useAccount';
 
 const AccountCard: React.FC = () => {
   const accounts = useAccount();
+  if (!accounts.length) return null;
 
   return (
     <Card className={s.card}>

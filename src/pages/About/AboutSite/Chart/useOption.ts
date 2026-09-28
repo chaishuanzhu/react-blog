@@ -1,22 +1,16 @@
-import { ClassType } from '..';
+import type { CategoryList } from '@/utils/api';
 
-const getChartData = (classes: ClassType[], artSum: number) => {
-  let sum = 0;
-  const res = classes.map(obj => {
-    sum += obj.count;
-    return { name: obj.class, value: obj.count };
-  });
-  const leave = artSum - sum;
-  leave &&
-    res.push({
-      name: '未分类',
-      value: leave
-    });
+const getChartData = (categories?: CategoryList) => {
+  if (!categories) return [];
+  const res = categories.items.map(item => ({ name: item.name, value: item.articleCount }));
+  if (categories.uncategorizedCount) {
+    res.push({ name: '未分类', value: categories.uncategorizedCount });
+  }
   return res;
 };
 
-export const useOption = (classes: ClassType[], artSum: number, mode: number) => {
-  const data = getChartData(classes!, artSum!);
+export const useOption = (categories: CategoryList | undefined, mode: number) => {
+  const data = getChartData(categories);
 
   const labelColor = ['rgb(255, 255, 255)', 'rgb(53, 53, 53)', 'rgb(53, 53, 53)'];
   const backgroundColor = ['rgb(22, 54, 51)', 'rgb(157, 222, 255)', 'rgb(194, 209, 223)'];

@@ -1,5 +1,6 @@
 import classNames from 'classnames';
-import React, { MouseEventHandler } from 'react';
+import type { MouseEventHandler } from 'react';
+import React from 'react';
 
 import s from './index.scss';
 

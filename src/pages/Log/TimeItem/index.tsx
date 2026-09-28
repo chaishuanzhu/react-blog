@@ -4,7 +4,7 @@ import React from 'react';
 import s from './index.scss';
 
 interface Props {
-  date: number;
+  date: string;
   logContent: string[];
 }
 

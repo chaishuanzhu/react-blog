@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
-import React, { MouseEventHandler } from 'react';
+import type { MouseEventHandler } from 'react';
+import React from 'react';
 
 import Card from '@/components/Card';
 
@@ -9,7 +10,7 @@ import PostCardLoading from './PostCardLoading';
 interface Props {
   title?: string;
   content?: string;
-  date?: number;
+  date?: string;
   tags?: string[];
   loading?: boolean;
   onClick?: MouseEventHandler<HTMLDivElement>;
@@ -23,9 +24,7 @@ const PostCard: React.FC<Props> = ({ title, content, date, tags, loading, onClic
       ) : (
         <>
           <div className={s.title}>{title}</div>
-          <p className={s.content}>
-            {content!.replace(/<a(.*?)>(.*?)<\/a>/g, '$2').replace(/[# |**|`|>]/g, '')}
-          </p>
+          <p className={s.content}>{content}</p>
           <div className={s.info}>
             <span className={s.date}>{dayjs(date!).format('YYYY-MM-DD')}</span>
             <div className={s.tags}>

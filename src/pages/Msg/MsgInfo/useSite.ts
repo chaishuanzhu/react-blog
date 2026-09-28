@@ -1,22 +1,25 @@
-import { myAvatar, myDescr, myLink, myName } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
+
+const absolute = (url: string) => new URL(url, window.location.origin).href;
 
 export const useSite = () => {
+  const { url, author } = siteConfig;
   const mySite = [
     {
       key: 'name',
-      value: myName
+      value: author.name
     },
     {
       key: 'link',
-      value: myLink
+      value: url || window.location.origin
     },
     {
       key: 'avatar',
-      value: myAvatar
+      value: absolute(author.avatar)
     },
     {
       key: 'descr',
-      value: myDescr
+      value: author.descr
     }
   ];
 

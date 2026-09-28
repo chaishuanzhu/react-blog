@@ -1,10 +1,11 @@
 import { useMount, useSafeState, useTitle } from 'ahooks';
+import { load } from 'jinrishici';
 import React from 'react';
 import { connect } from 'react-redux';
 
 import PageTitle from '@/components/PageTitle';
 import { setNavShow } from '@/redux/actions';
-import { siteTitle } from '@/utils/constant';
+import { siteConfig } from '@/site.config';
 import useTop from '@/utils/hooks/useTop';
 
 import Aside from './Aside';
@@ -15,26 +16,18 @@ interface Props {
   setNavShow?: Function;
 }
 
-const getPoem = require('jinrishici');
-
 const Home: React.FC<Props> = ({ setNavShow }) => {
-  useTitle(siteTitle);
+  useTitle(siteConfig.title);
   useTop(setNavShow);
 
   const [poem, setPoem] = useSafeState('');
   useMount(() => {
-    getPoem.load(
-      (res: {
-        data: {
-          content: string;
-        };
-      }) => setPoem(res.data.content)
-    );
+    load(res => setPoem(res.data.content));
   });
 
   return (
     <>
-      <PageTitle title={siteTitle} desc={poem || ''} className={s.homeTitle} />
+      <PageTitle title={siteConfig.title} desc={poem || ''} className={s.homeTitle} />
       <div className={s.body}>
         <Section />
         <Aside />

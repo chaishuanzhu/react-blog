@@ -1,68 +1,49 @@
-import useUrlState from '@ahooksjs/use-url-state';
 import { useRequest, useSafeState } from 'ahooks';
 import dayjs from 'dayjs';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import DisplayBar from '@/components/DisplayBar';
 import Layout from '@/components/Layout';
 import MyPagination from '@/components/MyPagination';
-import { DB } from '@/utils/apis/dbConfig';
-import { getWhereOrderPageSum } from '@/utils/apis/getWhereOrderPageSum';
-import { _, db } from '@/utils/cloudBase';
+import { getArticles } from '@/utils/api';
 import { detailPostSize, staleTime } from '@/utils/constant';
 
-import { ArticleType } from '../constant';
-
 const ArtDetail: React.FC = () => {
-  const [query] = useUrlState();
+  const [searchParams] = useSearchParams();
+  const tag = searchParams.get('tag') || '';
+  const category = searchParams.get('class') || '';
   const navigate = useNavigate();
 
   const [page, setPage] = useSafeState(1);
 
-  const where = query.tag
-    ? {
-        tags: db.RegExp({
-          regexp: `${query.tag}`,
-          options: 'i'
-        })
-      }
-    : {
-        classes: query.class
-      };
+  const filter = tag ? { tag } : { category };
 
   const { data, loading } = useRequest(
-    () =>
-      getWhereOrderPageSum({
-        dbName: DB.Article,
-        where: { ...where, post: _.eq(true) },
-        page,
-        size: detailPostSize,
-        sortKey: 'date'
-      }),
+    () => getArticles({ ...filter, page, pageSize: detailPostSize }),
     {
       retryCount: 3,
-      refreshDeps: [page],
-      cacheKey: `ArtDetail-${DB.Article}-${JSON.stringify(where)}-${page}`,
+      refreshDeps: [page, tag, category],
+      cacheKey: `ArtDetail-${JSON.stringify(filter)}-${page}`,
       staleTime
     }
   );
 
   return (
-    <Layout title={query.tag || query.class}>
-      {data?.articles.data.map((item: ArticleType) => (
+    <Layout title={tag || category}>
+      {data?.items.map(item => (
         <DisplayBar
-          key={item._id}
+          key={item.id}
           content={item.title}
-          right={dayjs(item.date).format('YYYY-MM-DD')}
+          right={dayjs(item.publishedAt).format('YYYY-MM-DD')}
           loading={loading}
-          onClick={() => navigate(`/post?title=${encodeURIComponent(item.titleEng)}`)}
+          onClick={() => navigate(`/post/${item.id}`)}
         />
       ))}
       <MyPagination
         current={page}
         defaultPageSize={detailPostSize}
-        total={data?.sum.total}
+        total={data?.total}
         setPage={setPage}
         autoScroll={true}
         scrollToTop={440}

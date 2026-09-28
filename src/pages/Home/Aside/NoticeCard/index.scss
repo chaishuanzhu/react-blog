@@ -1,4 +1,4 @@
-@import '../.././../../styles/base.scss';
+@use '../.././../../styles/base.scss' as *;
 
 .notice {
   border-radius: 14px;

@@ -1,4 +1,4 @@
-@import '../../../../../styles/base.scss';
+@use '../../../../../styles/base.scss' as *;
 
 .postCardLoading {
   height: 50px + 80px + 80px;
