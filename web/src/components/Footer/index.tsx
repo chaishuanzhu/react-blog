@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
     'Go',
     'MySQL'
   ];
-  const { sourceUrl, icp } = siteConfig;
+  const { sourceUrl, icp, police } = siteConfig;
 
   return (
     <footer className={s.footer}>
@@ -31,6 +31,13 @@ const Footer: React.FC = () => {
         <span>
           <a href={icp.url} target='_blank' rel='noreferrer' className={s.text}>
             {icp.no}
+          </a>
+        </span>
+      )}
+      {police.no && (
+        <span>
+          <a href={police.url} target='_blank' rel='noreferrer' className={s.text}>
+            {police.no}
           </a>
         </span>
       )}

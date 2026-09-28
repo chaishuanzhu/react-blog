@@ -2,7 +2,7 @@
 // 图片可以填完整 URL（比如后台上传到 OSS 后得到的链接），也可以放进 public/assets 用 /assets/xxx 引用。
 export const siteConfig = {
   // 浏览器标题、首页大标题、文章版权信息
-  title: '飞鸟小站',
+  title: '飞鱼小站',
   // 建站日期，首页「运行天数」从这天开始算
   startTime: '2026-09-28 00:00:00',
   // 本站地址，留言页「本站信息」里展示；留空则用当前访问的域名
@@ -13,13 +13,18 @@ export const siteConfig = {
   sourceUrl: '',
   // ICP 备案号，例如「浙ICP备xxxxxxxx号-1」
   icp: {
-    no: '',
+    no: '豫ICP备2024091194号',
     url: 'https://beian.miit.gov.cn/'
+  },
+  // 公安备案号
+  police: {
+    no: '浙公网安备33011002017888号',
+    url: 'https://beian.mps.gov.cn/#/query/webSearch?code=33011002017888'
   },
 
   author: {
-    name: '飞鸟',
-    descr: '一只平凡的鸟罢了。',
+    name: '飞鱼',
+    descr: '一条平凡的鱼罢了。',
     avatar: '/assets/avatar.svg'
   },
 
